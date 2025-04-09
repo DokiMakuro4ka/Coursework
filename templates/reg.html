@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>DokiTory</title>
+    <!-- Подключение CSS -->
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Регистрация</h1>
+        <form action="/user/create" method="post">
+            <label for="user_name">Имя пользователя:</label><br>
+            <input type="text" placeholder="Ваше никнейм" name="user_name"><br>
+            
+            <label for="mail">Электронная почта:</label><br>
+            <input type="email" placeholder="Ваша почта" name="mail"><br>
+            
+            <label for="password">Пароль:</label><br>
+            <input type="password" placeholder="Ваш пароль" name="password"><br>
+            
+            <button type="submit">Зарегистрироваться</button>
+        </form>
+    </div>
+</body>
+</html>

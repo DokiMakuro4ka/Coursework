@@ -1,0 +1,50 @@
+/* Основные стили навигационной панели */
+nav {
+    display: flex;
+    justify-content: flex-end; /* Логотип будет справа */
+    align-items: center;
+    background-color: #f9f9f9;
+    padding: 20px;
+}
+
+#logo-container {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+}
+
+.logo {
+    cursor: pointer;
+    padding-top: 10px; /* Верхний отступ */
+    padding-right: 20px; /* Правый отступ */
+    padding-bottom: 10px; /* Нижний отступ */
+    padding-left: 20px; /* Левый отступ */
+}
+
+
+#popup-menu {
+    position: absolute;
+    top: 80px; /* Меню будет ниже логотипа */
+    right: 25px; /* Меню будет справа */
+    background-color: rgba(0, 0, 0, 0.5); /* Тёмный слегка прозрачный фон */
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    list-style: none;
+    display: none;
+}
+
+
+#popup-menu li {
+    margin-bottom: 5px;
+}
+
+#popup-menu a {
+    text-decoration: none;
+    color: #333;
+}
+
+.hidden {
+    display: none;
+}

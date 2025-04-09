@@ -1,0 +1,58 @@
+/* Общие стили */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Контейнер для центрирования содержимого */
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh; /* Высота контейнера = высоте видимой части экрана */
+    flex-direction: column; /* Расположение элементов вертикально */
+}
+
+/* Стилизация формы */
+.form-container {
+    width: 400px;
+    margin: 0 auto;
+    text-align: center;
+    background-color: #f4f4f4;
+    padding: 20px;
+    border-radius: 10px;
+    border: 2px solid #ccc; /* Добавляем рамку вокруг формы */
+}
+
+/* Заголовок */
+h1 {
+    font-size: 24px;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+/* Поля ввода */
+input[type="text"], input[type="password"] {
+    display: block;
+    width: 100%;
+    padding: 12px 20px;
+    margin: 8px 0;
+    border: 2px solid #ccc; /* Рамки для полей ввода */
+    border-radius: 25px; /* Округление углов полей ввода */
+}
+
+/* Кнопка */
+button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 14px 20px;
+    margin-top: 15px;
+    border: none;
+    cursor: pointer;
+    border-radius: 25px; /* Округление краев кнопки */
+}
+
+button:hover {
+    background-color: #45a049;
+}

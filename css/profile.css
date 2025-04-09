@@ -1,0 +1,57 @@
+/* Основные стили */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+}
+
+header {
+    background-color: #333;
+    color: white;
+    padding: 10px 20px;
+}
+
+header nav a {
+    color: white;
+    text-decoration: none;
+    margin-right: 10px;
+}
+
+.profile-container {
+    max-width: 600px;
+    margin: 20px auto;
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.avatar img {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 50%;
+    margin-bottom: 20px;
+}
+
+.info {
+    text-align: center;
+}
+
+.info button {
+    padding: 10px 20px;
+    background-color: #333 ;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+footer {
+    background-color:#007bff;
+    color: white;
+    text-align: center;
+    padding: 10px;
+    margin-top: 20px;
+}

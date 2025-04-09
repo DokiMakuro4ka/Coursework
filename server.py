@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, abort
 import psycopg2
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__, static_folder="")
 
@@ -24,6 +25,10 @@ def success():
 @app.route('/')
 def main():
     return render_template('main.html')
+
+@app.route('/profile')
+def profile():
+    return render_template('profile.html')
 
 
 @app.route('/user/create', methods=['POST'])
@@ -73,6 +78,17 @@ def get_user(user_id=None):
         return abort(404, f"User with id {user_id} not found")
     
     return User(user_data[0][0], user_data[0][1]).__dict__
+
+@app.route('/profile')
+def profile():
+    # Проверяем, залогинился ли пользователь
+    if 'user_id' in session:
+        # Получаем данные пользователя из базы данных
+        user = User.query.filter_by(id=session['user_id']).first_or_404()
+        return render_template('profile.html', user=user)
+    else:
+        # Если пользователь не залогинился, перенаправляем на страницу входа
+        return redirect(url_for('login'))
 
 if __name__ == '__main__':
     app.run()

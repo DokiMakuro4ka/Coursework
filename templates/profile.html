@@ -19,12 +19,12 @@
         <section class="profile-container">
             <h1>Мой Профиль</h1>
             <div class="avatar">
-                <img src="logo.png" alt="Аватар пользователя">
+                <img src="{{ user.avatar_url }}" alt="Аватар пользователя">
             </div>
             <div class="info">
-                <h2>Осокин Даниил</h2>
-                <p>Дата регистрации: 09.04.2025</p>
-                <p>Электронная почта: brumis01@mail.ru</p>
+                <h2>{{ user.username }}</h2>
+                <p>Дата регистрации: {{ user.registration_date.strftime('%d.%m.%Y') }}</p>
+                <p>Электронная почта: {{ user.email }}</p>
                 <button>Редактировать профиль</button>
             </div>
         </section>

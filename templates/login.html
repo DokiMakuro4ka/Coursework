@@ -9,11 +9,24 @@
 <body>
     <div class="container">
         <h1>Авторизация</h1>
+        
+        <!-- Блок для отображения сообщений об ошибке -->
+        {% if error_message %}
+        <p style="color: red;">{{ error_message }}</p>
+        {% endif %}
+    
+        <!-- Дополнительная ссылка для регистрации, если пользователь не найден -->
+        {% if error_message == "Пользователь не найден." %}
+        <p><a href="/reg">Зарегистрироваться</a></p>
+        {% endif %}
+    
         <form action="/login" method="post">
-            <label for="user_name">Имя пользователя:</label><br>
+            <label for="username">Имя пользователя:</label><br>
             <input type="text" id="username" name="user_name"><br>
+            
             <label for="password">Пароль:</label><br>
             <input type="password" id="password" name="password"><br><br>
+            
             <button type="submit">Войти</button>
         </form>
     </div>

@@ -52,6 +52,7 @@ def success():
 @app.route('/')
 def home():
     if 'user_id' in session:
+        session['logged_in'] = True
         conn = get_db_connection()
         cur = conn.cursor()
         print(f"Запрашиваемый ID: {session['user_id']}")  # Отладочная печать
@@ -61,6 +62,7 @@ def home():
         avatar_url = user_data[0] if user_data else 'uploads/default_avatar.png'
         conn.close()
     else:
+        session['logged_in'] = False
         avatar_url = 'uploads/default_avatar.png'
 
     return render_template('main.html', avatar_url=avatar_url)
@@ -123,39 +125,40 @@ def login():
         user_name = request.form.get("user_name")
         password = request.form.get("password")
         
+        # Проверка наличия обоих полей
+        if not user_name or not password:
+            return render_template("login.html", error_message="Заполните все поля!")
+        
         # Получаем подключение к базе данных
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Сначала проверяем, существует ли пользователь
+        # Проверяем существование пользователя
         cur.execute("SELECT * FROM users WHERE user_name=%s", (user_name,))
         user = cur.fetchone()
         
         if user is not None:
-            stored_password_hash = user[3]  # Предполагаем, что пароль хранится в третьем поле
-            input_password_hash = hashlib.sha256(password.encode()).hexdigest()  # Простое хеширование SHA-256
-            print(stored_password_hash is input_password_hash)
+            stored_password_hash = user[3]  # Полагаясь, что пароль хранится в третьем поле
+            input_password_hash = hashlib.sha256(password.encode()).hexdigest()  # Хэшируем введённый пароль
+            
             if input_password_hash == stored_password_hash:
-                # Авторизация успешна
+                # Успешная авторизация
                 session['logged_in'] = True
                 session["user_id"] = user[0]
-                flash(f"Привет, {user[1]}! Ты успешно вошёл.")
-                return redirect(url_for("profile"))
+                return redirect(url_for("profile"))  # Перенаправление на профиль
+                
             else:
-                flash("Неверный пароль.")
-                return redirect(url_for('login'))
+                # Неверный пароль
+                return render_template("login.html", error_message="Неверный пароль.")
         else:
-            flash("Пользователь не найден.")
-            return redirect(url_for('login'))
+            # Пользователь не найден
+            return render_template("login.html", error_message="Пользователь не найден.")
         
-        # Завершаем работу с базой данных
+        # Закрываем соединение с БД
         cur.close()
         conn.close()
         
-        return redirect(url_for("login"))
-
     return render_template("login.html")
-
 # Маршрут для выхода пользователя
 @app.route("/logout")
 def logout():

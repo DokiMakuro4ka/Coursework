@@ -3,31 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мой Профиль | DokiTory</title>
+    <title>{% if session.get('logged_in') %}Мой Профиль{% else %}DokiTory{% endif %}</title>
     <link rel="stylesheet" href="../css/profile.css">
 </head>
 <body>
     <header>
         <nav>
             <a href="/">Главная</a>
-            <a href="/profile">Профиль</a>
-            <a href="/logout">Выход</a>
+            {% if session.get('logged_in') %}
+                <a href="/profile">Профиль</a>
+                <a href="/logout">Выход</a>
+            {% else %}
+                <a href="/login">Войти</a>
+                <a href="/register">Регистрация</a>
+            {% endif %}
         </nav>
     </header>
-
     <main>
-        <section class="profile-container">
-            <h1>Мой Профиль</h1>
-            <div class="avatar">
-                <img src="{{ user.avatar_url }}" alt="Аватар пользователя">
-            </div>
-            <div class="info">
-                <h2>{{ user.username }}</h2>
-                <p>Дата регистрации: {{ user.registration_date.strftime('%d.%m.%Y') }}</p>
-                <p>Электронная почта: {{ user.email }}</p>
-                <button>Редактировать профиль</button>
-            </div>
-        </section>
+        {% if session.get('logged_in') %}
+            <section class="profile-container">
+                <h1>Мой Профиль</h1>
+                <div class="avatar">
+                    <img src="{{ user.avatar_url }}" alt="Аватар пользователя">
+                </div>
+                <div class="info">
+                    <h2>{{ user.user_name }}</h2>
+                    <p>Дата регистрации: {{ user.registration_date.strftime('%d.%m.%Y') }}</p>
+                    <p>Электронная почта: {{ user.email }}</p>
+                    <form action="/edit-profile" method="get">
+                        <button type="submit">Редактировать профиль</button>
+                    </form>                    
+                </div>
+            </section>
+        {% else %}
+            <section class="guest-message">
+                <h1>Добро пожаловать на сайт DokiTory!</h1>
+                <p>Залогонись или зарегистрируйся, чтобы увидеть полный доступ.</p>
+                <a href="/login" class="btn btn-primary">Войти</a>
+                <a href="/reg" class="btn btn-secondary">Регистрация</a>
+            </section>
+        {% endif %}
     </main>
 
     <footer>

@@ -5,7 +5,7 @@ body {
     margin: 0;
 }
 
-/* Стилизация заголовка */
+/* Шапка */
 header {
     display: flex;
     align-items: center;
@@ -15,61 +15,74 @@ header {
     color: white;
 }
 
-.logo {
-    text-decoration: none;
-    color: white;
-    font-size: 24px;
+/* Логотип */
+.logo-container {
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 20px;
 }
 
+.logo img {
+    border: 2px solid rgba(0, 0, 0, 0.5); /* Рамка вокруг логотипа */
+    border-radius: 50%; /* Круглая форма рамки */
+}
+
+/* Название сайта */
+h1 {
+    font-size: 24px;
+    margin: 0;
+}
+
+/* Контейнер для иконки пользователя */
+.user-container {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* Аватарка пользователя или стандартная иконка */
 .user-icon img {
     cursor: pointer;
-    border: 2px solid rgba(0, 0, 0, 0.5); /* Прозрачная черная рамка */
-    border-radius: 50%;
+    border: 2px solid rgba(0, 0, 0, 0.5); /* Рамка вокруг иконки */
+    border-radius: 50%; /* Круглая форма рамки */
+    background-color: white; /* Белый фон при незалогинившемся состоянии */
 }
 
-
-/* Основной контейнер для меню */
+/* Всплывающее меню */
 #popup-menu {
     position: absolute;
-    top: 55px; /* Меню будет ниже логотипа */
-    right: 0; /* Левый край меню выровнен по левому краю логотипа */
-    background-color: rgba(0, 0, 0, 0.5); /* Полупрозрачный чёрный фон */
-    color: white; /* Цвет текста внутри меню */
+    top: 55px; /* Позиция под иконкой пользователя */
+    right: 20px; /* Выравниваем по правому краю */
+    background-color: rgba(0, 0, 0, 0.5); /* Полупрозрачный черный фон */
+    color: white; /* Белые буквы */
     padding: 10px;
     border-radius: 5px;
     list-style-type: none;
     transition: all 0.3s ease-in-out;
     opacity: 0;
     visibility: hidden;
-    transform: scaleY(0); /* Начальное состояние: скрытое и сжатое по вертикали */
+    transform: scaleY(0); /* Исходное положение */
 }
 
-/* Активированное состояние меню */
 #popup-menu.show {
     opacity: 1;
     visibility: visible;
-    transform: scaleY(1); /* Меню разворачивается вертикально */
+    transform: scaleY(1); /* Показываем меню */
 }
 
-/* Элементы списка внутри меню */
 #popup-menu li {
-    margin: 5px 0; /* Расстояние между пунктами меню */
+    margin: 5px 0;
 }
 
-/* Ссылки внутри пунктов меню */
 #popup-menu li a {
-    color: inherit; /* Наследует цвет от родительского элемента */
+    color: inherit;
     text-decoration: none;
 }
 
-/* Наведение мыши на пункты меню */
 #popup-menu li a:hover {
     text-decoration: underline;
 }
 
-
-
-/* Стилизуем основной контент */
+/* Основная секция */
 main section {
     max-width: 800px;
     margin: 30px auto;

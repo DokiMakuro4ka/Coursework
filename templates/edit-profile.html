@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Редактирование профиля</title>
+    <link rel="stylesheet" href="../css/edit-profile.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="/">Главная</a>
+            <a href="/profile">Профиль</a>
+            <a href="/logout">Выход</a>
+        </nav>
+    </header>
+
+    <main>
+        <section class="edit-profile-form">
+            <h1>Редактировать профиль</h1>
+            <form action="/update-profile" method="post" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="user_name">Имя пользователя:</label>
+                    <input type="text" id="user_name" name="user_name" value="{{ user.user_name }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email" value="{{ user.email }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="avatar">Аватар:</label>
+                    <input type="file" id="avatar" name="avatar">
+                </div>
+                <button type="submit">Сохранить изменения</button>
+            </form>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 DokiTory</p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,144 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    justify-content: center; /* Центрирование карточки */
+    align-items: center; /* Централизация по вертикали */
+    min-height: 100vh; /* Чтобы контент занимал весь экран */
+}
+
+.product-card {
+    text-align: center;
+    background-color: white;
+    padding: 30px; /* Внутренний отступ */
+    border-radius: 15px; /* Закругление углов */
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1); /* Тень */
+    position: relative;
+    width: 400px; /* Ширина карточки */
+    max-width: 90vw; /* Максимально доступная ширина на маленьких экранах */
+    margin: 20px auto; /* Верхний отступ от шапки + центровка по горизонтали */
+    display: flex; /* Использование Flexbox */
+    flex-direction: column; /* Элементы располагаются столбиком */
+    align-items: center; /* Центровка дочерних элементов по горизонтали */
+    justify-content: center; /* Центровка по вертикали */
+    height: fit-content; /* Высота адаптивная, занимает ровно столько места, сколько нужно */
+}
+
+.product-card .back-button {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background-color: transparent;
+    color: blue;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.product-card h2 {
+    margin-top: 10px;
+    font-size: 28px; /* Увеличенный размер заголовка */
+}
+
+.product-card p {
+    margin: 15px 0;
+    font-size: 18px; /* Увеличенный шрифт описания */
+}
+
+.product-card img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 10px; /* Скругленные края изображения */
+    margin-bottom: 20px; /* Отступ снизу для красоты */
+}
+
+.add-to-cart {
+    display: block;
+    width: 100%; /* Ширина кнопки равна ширине карточки */
+    padding: 15px; /* Больше внутреннего пространства */
+    background-color: green;
+    color: white;
+    border: none;
+    border-radius: 10px; /* Округлые углы кнопки */
+    font-size: 20px; /* Большой шрифт текста кнопки */
+    cursor: pointer;
+}
+
+.add-to-cart:hover {
+    background-color: darkgreen;
+}
+
+header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+}
+
+/* Логотип */
+.logo-container {
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 20px;
+}
+
+.logo img {
+    border: 2px solid rgba(0, 0, 0, 0.5); /* Рамка вокруг логотипа */
+    border-radius: 50%; /* Круглая форма рамки */
+}
+
+/* Название сайта */
+h1 {
+    font-size: 24px;
+    margin: 0;
+}
+
+/* Контейнер для иконки пользователя */
+.user-container {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* Аватарка пользователя или стандартная иконка */
+.user-icon img {
+    cursor: pointer;
+    border: 2px solid rgba(0, 0, 0, 0.5); /* Рамка вокруг иконки */
+    border-radius: 50%; /* Круглая форма рамки */
+    background-color: white; /* Белый фон при незалогинившемся состоянии */
+}
+
+/* Всплывающее меню */
+#popup-menu {
+    position: absolute;
+    top: 55px; /* Позиция под иконкой пользователя */
+    right: 20px; /* Выравниваем по правому краю */
+    background-color: rgba(0, 0, 0, 0.5); /* Полупрозрачный черный фон */
+    color: white; /* Белые буквы */
+    padding: 10px;
+    border-radius: 5px;
+    list-style-type: none;
+    transition: all 0.3s ease-in-out;
+    opacity: 0;
+    visibility: hidden;
+    transform: scaleY(0); /* Исходное положение */
+}
+
+#popup-menu.show {
+    opacity: 1;
+    visibility: visible;
+    transform: scaleY(1); /* Показываем меню */
+}
+
+#popup-menu li {
+    margin: 5px 0;
+}
+
+#popup-menu li a {
+    color: inherit;
+    text-decoration: none;
+}
+
+#popup-menu li a:hover {
+    text-decoration: underline;
+}

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Карточка товара</title>
+    <link rel="stylesheet" href="/css/products.css">
+</head>
+<body>
+    <header>
+        <div class="logo-container">
+            <a href="/" class="logo"><img src="../templates/logo.png" alt="Логотип" width="40" height="40"></a>
+        </div>
+        <h1>DokiTory</h1>
+        <div class="user-container">
+            {% if session.get('logged_in') %}
+                <div class="user-icon logged-in" onclick="togglePopup()">
+                    <img src="{{ avatar_url }}" alt="Аватарка пользователя" width="40" height="40">
+                </div>
+            {% else %}
+                <div class="user-icon" onclick="togglePopup()">
+                    <img src="../templates/default_avatar.png" alt="Иконка пользователя" width="40" height="40">
+                </div>
+            {% endif %}
+        </div>
+        <ul id="popup-menu" class="hidden">
+            {% if not session.get('logged_in') %}
+                <li><a href="/reg">Зарегистрироваться</a></li>
+                <li><a href="/login">Войти</a></li>
+            {% else %}
+                <li><a href="/logout">Выход</a></li>
+            {% endif %}
+            <li><a href="/">Главная</a></li>
+            <li><a href="/profile">Профиль</a></li>
+        </ul>
+    </header>  
+    <div class="product-card">
+        <img src="{{ product.image_url }}" alt="{{ product.title }}">
+        <h2>{{ product.title }}</h2>
+        <p>Цена: {{ product.price }} рублей</p>
+        <p>Описание: {{ product.description }}</p>
+        <button class="add-to-cart">Добавить в корзину</button>
+    </div>
+    <script src="../js/main.js"></script>
+</body>
+</html>

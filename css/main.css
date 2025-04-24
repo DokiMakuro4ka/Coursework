@@ -96,3 +96,68 @@ main h2 {
     text-align: center;
     margin-bottom: 20px;
 }
+
+/* Общая ширина карточки товара */
+.product-card {
+    display: inline-block;
+    width: calc(33% - 20px); /* Ширина трех колонок с промежутками */
+    vertical-align: top;
+    margin: 10px;
+    background-color: white;
+    transition: transform 0.3s ease-in-out; /* Анимация увеличения карточки */
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    text-align: center; /* Центрирование текста */
+}
+
+.product-card:hover {
+    transform: scale(1.05); /* Немного увеличиваем карточку при наведении */
+}
+
+/* Изображение товара */
+.product-image {
+    width: 100%; /* Масштабируемое изображение */
+    height: 200px; /* Зафиксированная высота изображения */
+    object-fit: cover; /* Сохраняем пропорции и центрируем изображение */
+    cursor: pointer;
+    transition: transform 0.3s ease-in-out; /* Анимация увеличения изображения */
+}
+
+.product-image:hover {
+    transform: scale(1.1); /* Увеличение изображения при наведении */
+}
+
+/* Заголовок товара */
+.product-card h3 {
+    font-size: 1.2em;
+    line-height: 1.5;
+    color: black;
+    text-decoration: none;
+    transition: all 0.3s ease-in-out; /* Плавная анимация перехода */
+    margin-top: 10px; /* Расстояние между картинкой и названием */
+}
+
+.product-card h3:hover {
+    color: blue;          /* Меняем цвет текста на синий */
+    transform: scale(1.1); /* Немного увеличиваем заголовок */
+}
+
+/* Описание товара */
+.description-truncated {
+    cursor: pointer;
+    color: gray;
+    user-select: none;
+    word-wrap: break-word; /* Перенос длинных слов */
+    text-align: left;      /* Левый выравнивание текста */
+    margin-top: 10px;     /* Расстояние между заголовком и описанием */
+    padding: 0 10px;      /* Внутренний отступ слева и справа */
+}
+
+.show-more-button {
+    color: blue;
+    font-weight: bold;
+    cursor: pointer;
+}
+

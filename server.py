@@ -1,5 +1,5 @@
 import hashlib
-from flask import Flask, render_template, request, redirect, url_for, abort, session, flash
+from flask import Flask, render_template, request, redirect, url_for, abort, session, flash, jsonify
 from flask_session import Session
 import psycopg2
 from werkzeug.utils import secure_filename
@@ -67,7 +67,6 @@ def home():
 
     return render_template('main.html', avatar_url=avatar_url)
 
-
 @app.route('/user/create', methods=['POST'])
 def create_user():
     user_name = request.form['user_name']
@@ -92,33 +91,6 @@ def create_user():
 
     return redirect(url_for('success'))
 
-@app.route('/users/all')    
-@app.route('/user/<int:user_id>')
-def get_user(user_id=None):
-    
-    if user_id is None:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute('''SELECT user_order, user_name, email, password FROM USERS''')
-        users_data = cur.fetchall()
-        conn.close()
-        cur.close()
-        
-        return [User(i[0], i[1], i[2], i[3]).__dict__ for i in users_data]
-    
-    cur.execute('''SELECT * FROM USERS WHERE users_order=%s''', [user_id])
-    
-    user_data = cur.fetchall()
-    
-    conn.close()
-    cur.close
-    
-    if users_data.__len__():
-        return abort(404, f"User with id {user_id} not found")
-    
-    return User(user_data[0][0], user_data[0][1]).__dict__
-
-# Маршрут для авторизации
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -154,12 +126,8 @@ def login():
             # Пользователь не найден
             return render_template("login.html", error_message="Пользователь не найден.")
         
-        # Закрываем соединение с БД
-        cur.close()
-        conn.close()
-        
     return render_template("login.html")
-# Маршрут для выхода пользователя
+
 @app.route("/logout")
 def logout():
     session.pop("user_id", None)
@@ -223,7 +191,6 @@ def edit_profile():
     else:
         return redirect(url_for('login'))
 
-# Маршрут для обновления профиля
 @app.route('/update-profile', methods=['POST'])
 def update_profile():
     if not session.get('logged_in'):
@@ -262,6 +229,121 @@ def update_profile():
 
     flash('Профиль успешно обновлён!', 'success')
     return redirect(url_for('profile'))
+
+@app.route("/api/products")
+def get_products():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM products;")
+    rows = cur.fetchall()
+    result = []
+    for row in rows:
+        result.append({
+            'product_id': row[0],
+            'title': row[1],
+            'description': row[2],
+            'price' : row[3],
+            'image_url': row[4]
+        })
+    return jsonify({'products': result})
+
+@app.route('/product/<int:id>', methods=['GET'])
+def view_product(id):
+    try:
+        if 'user_id' in session:
+            session['logged_in'] = True
+            conn = get_db_connection()
+            cur = conn.cursor()
+            print(f"Запрашиваемый ID: {session['user_id']}")  # Отладочная печать
+            cur.execute('SELECT avatar_url FROM users WHERE user_id=%s', (session['user_id'],))
+            user_data = cur.fetchone()
+            print(f"Полученный результат: {user_data}")  # Отладочная печать
+            avatar_url = user_data[0] if user_data else 'uploads/default_avatar.png'
+        else:
+            session['logged_in'] = False
+            avatar_url = 'uploads/default_avatar.png'
+
+        cur.execute("SELECT * FROM products WHERE product_id=%s;", (id,))
+        row = cur.fetchone()
+        
+        if row is None:
+            # Товар не найден, выдаем 404
+            abort(404)
+        
+        # Преобразование результата в удобный объект
+        product = {
+            'product_id': row[0],
+            'title': row[1],
+            'description': row[2],
+            'price' : row[3],
+            'image_url': row[4]
+        }
+        
+        # Возвращаем шаблон страницы товара
+        return render_template('product.html', product=product, avatar_url=avatar_url)
+    except Exception as ex:
+        # Выводим сообщение об ошибке
+        print(ex)
+        abort(500)
+        
+@app.route('/add_product', methods=['GET', 'POST'])
+def add_product():
+    if request.method == 'POST':
+        name = request.form['name']
+        description = request.form['description']
+        price = float(request.form['price'])
+        
+        # Обработка загрузки фото
+        file = request.files.get('photo')
+        photo_path = None
+        if file and file.filename != '':
+            filename = secure_filename(file.filename)
+            
+            # Определение пути для сохранения файла относительно текущего рабочего каталога
+            upload_folder = 'uploads'
+            os.makedirs(upload_folder, exist_ok=True)  # Создаем директорию загрузки, если её ещё нет
+            
+            # Полный путь для сохранения файла
+            full_path = os.path.join(upload_folder, filename)
+            
+            # Сохранение файла
+            file.save(full_path)
+            
+            # Относительный путь для записи в базу данных
+            photo_path = '/' + full_path.lstrip('/')
+        
+        try:
+            conn = get_db_connection()  # Предположительно, ваша функция подключения к БД
+            cur = conn.cursor()
+            
+            sql_query = """
+                INSERT INTO products (title, description, price, image_url)
+                VALUES (%s, %s, %s, %s);
+            """
+            values = (name, description, price, photo_path)
+            cur.execute(sql_query, values)
+            conn.commit()
+            flash('Продукт успешно добавлен!', category='success')
+            return redirect(url_for('home'))
+        except Exception as e:
+            print(e)
+            flash('Ошибка при добавлении продукта.', category='danger')
+            return redirect(url_for('home'))
+        finally:
+            cur.close()
+            conn.close()
+    
+    return render_template('add_product.html')
+
+@app.route('/edit_product/<int:product_id>', methods=['GET'])
+def edit_product(product_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM products WHERE product_id=%s', (product_id,))
+    product = cur.fetchone()
+    cur.close()
+    conn.close()
+    return render_template('edit_product.html', product=product)
 
 if __name__ == "__main__":
     app.run(debug=True)

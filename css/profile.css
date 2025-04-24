@@ -10,7 +10,7 @@ body {
 
 /* Шапка сайта */
 header {
-    background-color: #4caf50;
+    background-color: #007bff;
     color: white;
     padding: 1rem;
     text-align: center;
@@ -18,7 +18,7 @@ header {
 
 header nav {
     display: flex;
-    justify-content: center;
+    justify-content: space-around;
     gap: 1em;
 }
 
@@ -31,7 +31,7 @@ header nav a {
 }
 
 header nav a:hover {
-    background-color: #3e8e41;
+    background-color: blue;
 }
 
 /* Главный контейнер */
@@ -66,7 +66,7 @@ header nav a:hover {
 .info button {
     display: inline-block;
     padding: 10px 20px;
-    background-color: #4caf50;
+    background-color: #007bff;
     color: white;
     border: none;
     cursor: pointer;
@@ -75,7 +75,7 @@ header nav a:hover {
 }
 
 .info button:hover {
-    background-color: #3e8e41;
+    background-color: blue;
 }
 
 /* Гостевое сообщение */
@@ -99,7 +99,7 @@ header nav a:hover {
 }
 
 .guest-message a:hover {
-    background-color: #3e8e41;
+    background-color: blue;
 }
 
 /* Всплывающие сообщения (Flash messages) */
@@ -135,7 +135,7 @@ header nav a:hover {
 
 /* Нижний колонтитул */
 footer {
-    background-color: #4caf50;
+    background-color: #007bff;
     color: white;
     text-align: center;
     padding: 10px;

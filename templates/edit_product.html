@@ -2,30 +2,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Редактирование товара</title>
+    <!-- Подключаем CSS-стили -->
     <link rel="stylesheet" href="/css/edit_product.css">
 </head>
 <body>
-<h1>Редактирование товара</h1>
+    <h1>Редактирование товара {{product.0}}</h1>
 
-<form action="/api/edit_product.html" method="post">
-    <label for="title">Название:</label><br>
-    <input type="text" id="title" name="title"><br>
+    <form action="/edit_product/{{product.0}}" method="POST" enctype="multipart/form-data">
+        <label for="title">Название:</label><br>
+        <input type="text" id="title" name="title"><br>
 
-    <label for="description">Описание:</label><br>
-    <textarea id="description" name="description"></textarea><br>
+        <label for="description">Описание:</label><br>
+        <textarea id="description" name="description"></textarea><br>
 
-    <label for="price">Цена:</label><br>
-    <input type="number" step="0.01" id="price" name="price"><br>
+        <label for="price">Цена:</label><br>
+        <input type="number" step="0.01" id="price" name="price"><br>
 
-    <label for="image_url">URL изображения:</label><br>
-    <input type="url" id="image_url" name="image_url"><br>
+        <label for="image_url">Ссылка на изображение:</label><br>
+        <input type="file" id="image_url" name="image_url"><br>
 
-    <input type="hidden" name="product_id" value="{{ product_id }}">
-
-    <button type="submit">Сохранить изменения</button>
-</form>
-
-<a href="/">Вернуться к списку товаров</a>
+        <button type="submit">Обновить товар</button>
+    </form>
+    
 </body>
 </html>

@@ -161,3 +161,29 @@ main h2 {
     cursor: pointer;
 }
 
+/* Стили для кнопок редактирования и удаления */
+.edit-btn,
+.delete-button {
+    background-color: transparent;
+    border-radius: 5px;
+    padding: 5px 10px;
+    margin-right: 5px;
+    transition: all .3s ease-in-out;
+    cursor: pointer;
+}
+
+.edit-btnn {
+    color: orange;
+    border: 1px solid orange;
+}
+
+.delete-button {
+    color: red;
+    border: 1px solid red;
+}
+
+.edit-btn:hover,
+.delete-button:hover {
+    transform: scale(1.1);
+    opacity: 0.8;
+}

@@ -1,7 +1,7 @@
 body {
     font-family: Arial, sans-serif;
-    line-height: 1.6;
-    margin: 20px;
+    background-color: #f7f7f7;
+    padding: 20px;
 }
 
 h1 {
@@ -9,23 +9,34 @@ h1 {
     text-align: center;
 }
 
-form label {
-    display: block;
-    margin-top: 10px;
+form {
+    max-width: 600px;
+    margin: 0 auto;
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
-form input[type="text"],
-form textarea,
-form input[type="number"] {
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+input[type=text],
+textarea,
+input[type=number],
+input[type=url] {
     width: 100%;
-    padding: 8px;
-    margin-top: 5px;
-    border: 1px solid #ccc;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
     border-radius: 4px;
 }
 
-form button {
-    background-color: #007BFF;
+button[type=submit] {
+    background-color: #007bff;
     color: white;
     padding: 10px 20px;
     border: none;
@@ -33,13 +44,6 @@ form button {
     cursor: pointer;
 }
 
-form button:hover {
+button[type=submit]:hover {
     background-color: #0056b3;
-}
-
-a {
-    display: block;
-    margin-top: 20px;
-    text-decoration: underline;
-    color: blue;
 }

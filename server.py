@@ -13,6 +13,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 # Конфигурация для работы с сессией
 app.config["SECRET_KEY"] = "super_secret_key"  # Замените на свою секретную фразу
 app.config["SESSION_TYPE"] = "filesystem"      # Хранение сессий на файловой системе
+from flask_session import Session
 Session(app)
 
 # Настройки подключения к базе данных
@@ -22,6 +23,15 @@ DATABASE_URL = 'postgresql://postgres:123123@localhost:5432/users_application'  
 def get_db_connection():
     conn = psycopg2.connect(DATABASE_URL)
     return conn
+
+# Путь к директории загрузки изображений
+UPLOAD_FOLDER = app.config['UPLOAD_FOLDER']
+
+# Разрешенные расширения файлов
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Класс для представления пользователя
 class User:
@@ -55,10 +65,8 @@ def home():
         session['logged_in'] = True
         conn = get_db_connection()
         cur = conn.cursor()
-        print(f"Запрашиваемый ID: {session['user_id']}")  # Отладочная печать
         cur.execute('SELECT avatar_url FROM users WHERE user_id=%s', (session['user_id'],))
         user_data = cur.fetchone()
-        print(f"Полученный результат: {user_data}")  # Отладочная печать
         avatar_url = user_data[0] if user_data else 'uploads/default_avatar.png'
         conn.close()
     else:
@@ -233,20 +241,78 @@ def update_profile():
 @app.route("/api/products")
 def get_products():
     conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM products;")
-    rows = cur.fetchall()
-    result = []
-    for row in rows:
-        result.append({
+    if not conn:
+        return jsonify({"message": "Ошибка подключения к базе данных."}), 500
+
+    # Параметры фильтра
+    title_filter = request.args.get('title')
+    price_min = request.args.get('min_price')
+    price_max = request.args.get('max_price')
+    sort_by = request.args.get('sort_by') or 'product_id'
+
+    # Проверяем валидные поля сортировки
+    valid_sort_fields = ['product_id', 'title', 'price']
+    if sort_by not in valid_sort_fields:
+        return jsonify({"message": f"Недопустимое поле сортировки '{sort_by}'. Допустимые значения: {valid_sort_fields}"})
+
+    # Формируем SQL-запрос с условиями фильтрации и сортировкой
+    sql_query = """
+        SELECT *
+        FROM products
+        WHERE true
+    """
+
+    params = {}
+
+    if title_filter:
+        sql_query += " AND LOWER(title) LIKE LOWER(%(title)s)"
+        params['title'] = '%' + title_filter.lower() + '%'
+
+    if price_min is not None:
+        sql_query += " AND price >= %(min_price)s"
+        params['min_price'] = float(price_min)
+
+    if price_max is not None:
+        sql_query += " AND price <= %(max_price)s"
+        params['max_price'] = float(price_max)
+
+    sql_query += f" ORDER BY {sort_by}"
+
+    with conn.cursor() as cur:
+        cur.execute(sql_query, params)
+        rows = cur.fetchall()
+
+    result = [
+        {
             'product_id': row[0],
             'title': row[1],
             'description': row[2],
-            'price' : row[3],
+            'price': row[3],
             'image_url': row[4]
-        })
+        }
+        for row in rows
+    ]
+
     return jsonify({'products': result})
 
+@app.route("/api/products/<int:product_id>", methods=["DELETE"])
+def delete_product(product_id):
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"message": "Ошибка подключения к базе данных."}), 500
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM products WHERE product_id=%s;", (product_id,))
+        
+        # Закрываем транзакцию и фиксируем изменения
+        conn.commit()
+
+        return jsonify({"message": "Товар успешно удалён."}), 200
+    except Exception as e:
+        print(f"Ошибка при удалении товара: {e}")
+        return jsonify({"message": "Ошибка при удалении товара."}), 500
+    
 @app.route('/product/<int:id>', methods=['GET'])
 def view_product(id):
     try:
@@ -254,10 +320,8 @@ def view_product(id):
             session['logged_in'] = True
             conn = get_db_connection()
             cur = conn.cursor()
-            print(f"Запрашиваемый ID: {session['user_id']}")  # Отладочная печать
             cur.execute('SELECT avatar_url FROM users WHERE user_id=%s', (session['user_id'],))
             user_data = cur.fetchone()
-            print(f"Полученный результат: {user_data}")  # Отладочная печать
             avatar_url = user_data[0] if user_data else 'uploads/default_avatar.png'
         else:
             session['logged_in'] = False
@@ -283,11 +347,10 @@ def view_product(id):
         return render_template('product.html', product=product, avatar_url=avatar_url)
     except Exception as ex:
         # Выводим сообщение об ошибке
-        print(ex)
         abort(500)
-        
+
 @app.route('/add_product', methods=['GET', 'POST'])
-def add_product():
+def add_product():  
     if request.method == 'POST':
         name = request.form['name']
         description = request.form['description']
@@ -326,7 +389,6 @@ def add_product():
             flash('Продукт успешно добавлен!', category='success')
             return redirect(url_for('home'))
         except Exception as e:
-            print(e)
             flash('Ошибка при добавлении продукта.', category='danger')
             return redirect(url_for('home'))
         finally:
@@ -335,15 +397,53 @@ def add_product():
     
     return render_template('add_product.html')
 
-@app.route('/edit_product/<int:product_id>', methods=['GET'])
-def edit_product(product_id):
+@app.route('/edit_product/<int:id>', methods=['GET', 'POST'])
+def edit_product(id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('SELECT * FROM products WHERE product_id=%s', (product_id,))
-    product = cur.fetchone()
-    cur.close()
-    conn.close()
-    return render_template('edit_product.html', product=product)
+
+    if request.method == 'GET':  # Запрашиваем данные товара
+        cur.execute("SELECT * FROM products WHERE product_id=%s;", (id,))
+        product = cur.fetchone()
+        if not product:
+            flash('Товар не найден.', category='warning')
+            return redirect(url_for('home'))
+        else:
+            return render_template('edit_product.html', product=product)
+
+    elif request.method == 'POST':  # Обрабатываем отправленную форму
+        title = request.form['title']
+        description = request.form['description']
+        price = float(request.form['price'])
+        image_file = request.files.get('image_url')  # Проверка загрузки нового изображения
+        print(f'Полученные данные: название {title}, описание{description}, цена{price}, фото{image_file}')
+        
+        # Если загрузилось новое изображение
+        if image_file and image_file.filename != '':
+            filename = secure_filename(image_file.filename)
+            image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            image_file.save(image_path)
+            print ('Файл: ', image_file)
+            new_image_url = "/uploads/" + filename
+                    # Обновление записей в таблице
+            sql_query = """
+                UPDATE products SET title=%s, description=%s, price=%s, image_url=%s WHERE product_id=%s;
+            """
+            values = (title, description, price, new_image_url, id)
+            cur.execute(sql_query, values)
+            conn.commit()
+            cur.close()
+            conn.close()
+            flash('Товар успешно обновлён!', category='success')
+            return redirect(url_for('home'))  # Перенаправляем на список товаров
+
+        else:
+            # Здесь мы используем старый адрес изображения из формы
+            old_image_url = request.form.get('old_image_url')  # Предположительно старое изображение передается в форме
+            new_image_url = old_image_url
+            return redirect(url_for('home'))
+if __name__ == '__main__':
+    app.run(debug=True)
 
 if __name__ == "__main__":
     app.run(debug=True)

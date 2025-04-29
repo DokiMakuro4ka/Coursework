@@ -6,7 +6,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     for (const product of data.products) {
         let truncatedDescription = truncateText(product.description, 100); // Ограничение описания до 100 символов
-        createProductCard(product.title, truncatedDescription, product.price, product.image_url, product.description, `/product/${product.product_id}`, product.product_id);
+        createProductCard(
+            product.title,
+            truncatedDescription,
+            product.price,
+            product.image_url,
+            product.description,
+            `/product/${product.product_id}`,
+            product.product_id
+        );
     }
 });
 
@@ -48,13 +56,16 @@ function createProductCard(title, description, price, imgUrl, fullDescription, l
 
     // Описание товара с кнопкой "ещё"
     const descElement = document.createElement('p');
-    descElement.innerHTML = `<span class="description-truncated" onclick="showMore(this, '${fullDescription.replace(/'/g, "\\'")}')">${description}</span>`;
+    descElement.className = 'truncated-description';
+    descElement.textContent = description;
+    descElement.setAttribute('data-full-text', fullDescription);
 
     // Кнопки редактирования и удаления
     const editButton = document.createElement('button');
-    editButton.className = 'edit-button';
+    editButton.className = 'edit-btn';
     editButton.textContent = 'Редактировать';
-    editButton.onclick = function() { editProduct(productId); };
+    editButton.dataset.id = productId;
+    EditButton(editButton);
 
     const deleteButton = document.createElement('button');
     deleteButton.className = 'delete-button';
@@ -72,49 +83,50 @@ function createProductCard(title, description, price, imgUrl, fullDescription, l
 }
 
 // Открывает полное описание товара при клике на кнопку "ещё"
-function showMore(element, fullDescription) {
-    element.style.whiteSpace = 'normal';   // Отменяем ограничение строки
-    element.style.overflow = '';           // Показываем полный текст
-    element.textContent = fullDescription; // Полностью показываем описание
-}
-
-// Редактируем товар
-async function editProduct(productId) {
-    const response = await fetch(`/api/edit_product?id=${productId}`);
-    window.location.href = '/templates/edit_product.html'; // Перенаправление на форму редактирования продукта
-}
-
-// Удаляем товар
-async function deleteProduct(productId) {
-    if (!confirm(`Вы уверены, что хотите удалить продукт №${productId}?`)) return;
-
-    const response = await fetch(`/api/delete_product`, {
-        method: 'DELETE',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({id: productId})
-    });
-
-    const result = await response.json();
-    alert(result.message); // Оповещаем пользователя о результате операции
-    location.reload(); // Обновляем страницу, чтобы изменения вступили в силу
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-    // Отправка формы добавления товара
-    document.querySelector("#add-product-form")?.addEventListener("submit", async event => {
-        event.preventDefault(); // Предотвращаем обычную отправку формы
-
-        const formData = new FormData(event.target);
-
-        const response = await fetch('/api/add_product', {
-            method: 'POST',
-            body: formData
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.truncated-description').forEach(function(descriptionElement) {
+        descriptionElement.addEventListener('click', function(event) {
+            event.stopPropagation(); // предотвратим всплытие события
+            const fullText = this.getAttribute('data-full-text');
+            this.textContent = fullText;
+            this.removeEventListener('click', arguments.callee); // уберем обработчик после открытия полного текста
         });
-
-        const result = await response.json();
-        alert(result.message); // Оповещаем пользователя о результате операции
-        location.reload(); // Обновляем страницу, чтобы увидеть новые товары
     });
 });
+
+//Функция для редактирования товара
+function EditButton(button) {
+    button.addEventListener('click', function(event) {
+        event.preventDefault();
+        
+        // Получаем productId из аттрибута data-id
+        var productId = this.dataset.id;
+        
+        // Формируем URL
+        var editUrl = '/edit_product/' + productId;
+        
+        // Переходим на соответствующую страницу
+        window.location.href = editUrl;
+    });
+}
+
+// Функция удаления товара (ее реализация зависит от особенностей вашей архитектуры)
+function deleteProduct(productId) {
+    if (window.confirm('Вы уверены, что хотите удалить этот товар?')) {
+        fetch(`/api/products/${productId}`, {
+            method: 'DELETE'
+        })
+        .then(response => {
+            if (response.ok) {
+                alert('Товар успешно удалён!');
+                location.reload(); // обновляем страницу после успешной операции
+            } else {
+                alert('Ошибка при удалении товара.');
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка:', error);
+            alert('Ошибка при удалении товара.');
+        });
+    }
+}

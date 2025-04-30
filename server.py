@@ -35,13 +35,14 @@ def allowed_file(filename):
 
 # Класс для представления пользователя
 class User:
-    def __init__(self, user_id, user_name, email, password_hash, avatar_url, registration_date):
+    def __init__(self, user_id, user_name, email, password_hash, avatar_url, registration_date, role):
         self.user_id = user_id
         self.user_name = user_name
         self.email = email
         self.password_hash = password_hash
         self.avatar_url = avatar_url
         self.registration_date = registration_date
+        self.role = role
 
 class User_profile:
     def __init__(self,user_id, user_name, email, avatar_url, registration_date):
@@ -50,6 +51,11 @@ class User_profile:
         self.email = email
         self.avatar_url = avatar_url
         self.registration_date = registration_date
+
+class Role:
+    def __init__(self, role_id, role_name):
+        self.role_id = role_id
+        self.role_name = role_name
 
 @app.route('/reg')
 def reg():
@@ -61,7 +67,9 @@ def success():
 
 @app.route('/')
 def home():
-    if 'user_id' in session:
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    elif 'user_id' in session:
         session['logged_in'] = True
         conn = get_db_connection()
         cur = conn.cursor()
@@ -144,6 +152,8 @@ def logout():
 
 @app.route("/profile")
 def profile():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
     # Проверяем наличие авторизации
     if "user_id" in session:
         conn = get_db_connection()  # Функция для подключения к БД
@@ -241,9 +251,21 @@ def update_profile():
 @app.route("/api/products")
 def get_products():
     conn = get_db_connection()
-    if not conn:
-        return jsonify({"message": "Ошибка подключения к базе данных."}), 500
+    cur = conn.cursor()
 
+    # Сначала получаем роль пользователя
+    user_id = session.get('user_id')
+    if user_id:
+        cur.execute('SELECT role_id FROM users WHERE user_id=%s', (user_id,))
+        user_role_row = cur.fetchone()
+        if user_role_row:
+            user_role = user_role_row[0]
+        else:
+            user_role = '1'
+    else:
+        user_role = '1'
+
+    # Далее выполняем основную выборку продуктов
     # Параметры фильтра
     title_filter = request.args.get('title')
     price_min = request.args.get('min_price')
@@ -278,9 +300,8 @@ def get_products():
 
     sql_query += f" ORDER BY {sort_by}"
 
-    with conn.cursor() as cur:
-        cur.execute(sql_query, params)
-        rows = cur.fetchall()
+    cur.execute(sql_query, params)
+    rows = cur.fetchall()
 
     result = [
         {
@@ -293,25 +314,11 @@ def get_products():
         for row in rows
     ]
 
-    return jsonify({'products': result})
-
-@app.route("/api/products/<int:product_id>", methods=["DELETE"])
-def delete_product(product_id):
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({"message": "Ошибка подключения к базе данных."}), 500
-
-    try:
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM products WHERE product_id=%s;", (product_id,))
-        
-        # Закрываем транзакцию и фиксируем изменения
-        conn.commit()
-
-        return jsonify({"message": "Товар успешно удалён."}), 200
-    except Exception as e:
-        print(f"Ошибка при удалении товара: {e}")
-        return jsonify({"message": "Ошибка при удалении товара."}), 500
+    # Возвращаем список продуктов и роль пользователя
+    return jsonify({
+        'products': result,
+        'user_role': user_role
+    })
     
 @app.route('/product/<int:id>', methods=['GET'])
 def view_product(id):
@@ -401,49 +408,53 @@ def add_product():
 def edit_product(id):
     conn = get_db_connection()
     cur = conn.cursor()
+    cur.execute('SELECT role_id FROM users WHERE user_id=%s', (session['user_id'],))
+    user_role = cur.fetchone()[0]
+    print('Роль: ', user_role)
+    if user_role == '1':
+        flash('Вы не имеете полномочий для удаления товаров.', 'danger')
+        return redirect(url_for('home'))
+    else:
+        if request.method == 'GET':  # Запрашиваем данные товара
+            cur.execute("SELECT * FROM products WHERE product_id=%s;", (id,))
+            product = cur.fetchone()
+            if not product:
+                flash('Товар не найден.', category='warning')
+                return redirect(url_for('home'))
+            else:
+                return render_template('edit_product.html', product=product)
 
-    if request.method == 'GET':  # Запрашиваем данные товара
-        cur.execute("SELECT * FROM products WHERE product_id=%s;", (id,))
-        product = cur.fetchone()
-        if not product:
-            flash('Товар не найден.', category='warning')
-            return redirect(url_for('home'))
-        else:
-            return render_template('edit_product.html', product=product)
+        elif request.method == 'POST':  # Обрабатываем отправленную форму
+            title = request.form['title']
+            description = request.form['description']
+            price = float(request.form['price'])
+            image_file = request.files.get('image_url')  # Проверка загрузки нового изображения
+            print(f'Полученные данные: название {title}, описание{description}, цена{price}, фото{image_file}')
+            
+            # Если загрузилось новое изображение
+            if image_file and image_file.filename != '':
+                filename = secure_filename(image_file.filename)
+                image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                image_file.save(image_path)
+                print ('Файл: ', image_file)
+                new_image_url = "/uploads/" + filename
+                        # Обновление записей в таблице
+                sql_query = """
+                    UPDATE products SET title=%s, description=%s, price=%s, image_url=%s WHERE product_id=%s;
+                """
+                values = (title, description, price, new_image_url, id)
+                cur.execute(sql_query, values)
+                conn.commit()
+                cur.close()
+                conn.close()
+                flash('Товар успешно обновлён!', category='success')
+                return redirect(url_for('home'))  # Перенаправляем на список товаров
 
-    elif request.method == 'POST':  # Обрабатываем отправленную форму
-        title = request.form['title']
-        description = request.form['description']
-        price = float(request.form['price'])
-        image_file = request.files.get('image_url')  # Проверка загрузки нового изображения
-        print(f'Полученные данные: название {title}, описание{description}, цена{price}, фото{image_file}')
-        
-        # Если загрузилось новое изображение
-        if image_file and image_file.filename != '':
-            filename = secure_filename(image_file.filename)
-            image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            image_file.save(image_path)
-            print ('Файл: ', image_file)
-            new_image_url = "/uploads/" + filename
-                    # Обновление записей в таблице
-            sql_query = """
-                UPDATE products SET title=%s, description=%s, price=%s, image_url=%s WHERE product_id=%s;
-            """
-            values = (title, description, price, new_image_url, id)
-            cur.execute(sql_query, values)
-            conn.commit()
-            cur.close()
-            conn.close()
-            flash('Товар успешно обновлён!', category='success')
-            return redirect(url_for('home'))  # Перенаправляем на список товаров
+            else:
+                # Здесь мы используем старый адрес изображения из формы
+                old_image_url = request.form.get('old_image_url')  # Предположительно старое изображение передается в форме
+                new_image_url = old_image_url
+                return redirect(url_for('home'))
 
-        else:
-            # Здесь мы используем старый адрес изображения из формы
-            old_image_url = request.form.get('old_image_url')  # Предположительно старое изображение передается в форме
-            new_image_url = old_image_url
-            return redirect(url_for('home'))
 if __name__ == '__main__':
-    app.run(debug=True)
-
-if __name__ == "__main__":
     app.run(debug=True)

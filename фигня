@@ -1,0 +1,118 @@
+Провёл обзор твоей функции createProductCard и заметил пару моментов, которые требуют внимания:
+
+Проблемы и рекомендации:
+
+Неправильное формирование цены товара:
+Ты используешь следующее выражение для отображения цены:
+
+priceElement.textContent = ${price} руб;
+
+Здесь нужны обратные кавычки (`), чтобы интерполировать цену внутрь строки. Иначе получится синтаксическая ошибка. Верное решение:
+
+priceElement.textContent = `${price} руб.`;
+
+
+Кнопки редактирования и удаления:
+Эти кнопки создаются только для пользователей с ролью "2" (предположительно, это роль администратора). Возможно, стоило бы изменить условие, если роли представлены числами:
+
+Если роль 2 однозначно обозначает администратора, то оставить так.
+Но если у тебя текстовые названия ролей, лучше сравнить с текстом (например, "admin").
+
+
+Добавление несуществующих кнопок:
+Внутри условия проверки роли ты создаёшь кнопки редактирования и удаления, но вне зависимости от результата проверки, в конце карты добавляешь их в элемент независимо от наличия самой кнопки:
+
+cardElement.appendChild(editButton);
+cardElement.appendChild(deleteButton);
+
+Поскольку эти кнопки созданы только для определенных ролей, стоит перенести добавление кнопок внутрь блока if:
+
+if (userRole === '2') {
+    // Создание кнопок
+    cardElement.appendChild(editButton);
+    cardElement.appendChild(deleteButton);
+}
+
+
+Структура элемента:
+Сейчас в конце функции ты дважды добавляешь кнопки редактирования и удаления даже если они не были созданы (при условии отсутствия административной роли). Стоит убрать лишние строчки и привести структуру логики в порядок.
+
+Оптимизированная функция:
+
+function createProductCard(title, description, price, imgUrl, fullDescription, link, productId, userRole) {
+    const cardElement = document.createElement('div');
+    cardElement.className = 'product-card';
+
+    // Картинка товара с ссылкой
+    const aImgElement = document.createElement('a');
+    aImgElement.href = link;
+    aImgElement.target = '_self';
+
+    const imgElement = document.createElement('img');
+    imgElement.src = imgUrl;
+    imgElement.alt = title;
+    imgElement.className = 'product-image';
+
+    aImgElement.appendChild(imgElement);
+
+    // Заголовок товара с ссылкой
+    const aTitleElement = document.createElement('a');
+    aTitleElement.href = link;
+    aTitleElement.target = '_self';
+
+    const titleElement = document.createElement('h3');
+    titleElement.textContent = title;
+    aTitleElement.appendChild(titleElement);
+
+    // Цена товара
+    const priceElement = document.createElement('p');
+    priceElement.className = 'product-price';
+    priceElement.textContent = `${price} руб.`; // Исправил форматы строки
+
+    // Описание товара с кнопкой "ещё"
+    const descElement = document.createElement('p');
+    descElement.className = 'truncated-description';
+    descElement.textContent = description;
+    descElement.setAttribute('data-full-text', fullDescription);
+
+    // Добавляем элементы в карточку товара
+    cardElement.appendChild(aImgElement);
+    cardElement.appendChild(aTitleElement);
+    cardElement.appendChild(priceElement);
+    cardElement.appendChild(descElement);
+
+    // Только админам показываем кнопки редактирования и удаления
+    if (userRole === '2') {
+        // Кнопка редактирования
+        const editButton = document.createElement('button');
+        editButton.className = 'edit-btn';
+        editButton.textContent = 'Редактировать';
+        editButton.dataset.id = productId;
+        editButton.onclick = function() {
+            editProduct(productId); // Вызов функции редактирования
+        };
+
+        // Кнопка удаления
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'delete-button';
+        deleteButton.textContent = 'Удалить';
+        deleteButton.onclick = function() {
+            deleteProduct(productId); // Вызов функции удаления
+        };
+
+        // Добавляем кнопки в карточку товара
+        cardElement.appendChild(editButton);
+        cardElement.appendChild(deleteButton);
+    }
+
+    // Вставляем карточку в контейнер списка товаров
+    document.querySelector('#product-list').appendChild(cardElement);
+}
+
+Важные моменты:
+
+Все кнопки теперь добавляются только для администраторов (если роль равна "2").
+Интерполяция строки для отображения цены сделана корректно.
+Лишний код для добавления кнопок вне условия убран.
+
+Эти изменения обеспечат стабильную работу и предотвратят появление ненужных кнопок для обычных пользователей.

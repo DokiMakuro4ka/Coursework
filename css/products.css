@@ -22,8 +22,8 @@ body {
     align-items: center; /* Центровка дочерних элементов по горизонтали */
     justify-content: center; /* Центровка по вертикали */
     height: fit-content; /* Высота адаптивная, занимает ровно столько места, сколько нужно */
+    word-break: break-word; /* Добавляем автоматический перенос длинных слов */
 }
-
 .product-card .back-button {
     position: absolute;
     top: 10px;

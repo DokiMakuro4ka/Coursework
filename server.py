@@ -338,7 +338,7 @@ def view_product(id):
         row = cur.fetchone()
         
         if row is None:
-            # Товар не найден, выдаем 404
+            # Товар не найден, выдаём ошибку 404
             abort(404)
         
         # Преобразование результата в удобный объект
@@ -346,7 +346,7 @@ def view_product(id):
             'product_id': row[0],
             'title': row[1],
             'description': row[2],
-            'price' : row[3],
+            'price': row[3],
             'image_url': row[4]
         }
         
@@ -355,6 +355,38 @@ def view_product(id):
     except Exception as ex:
         # Выводим сообщение об ошибке
         abort(500)
+
+@app.route("/add-to-cart", methods=["POST"])
+def add_to_cart():
+    """Добавляет товар в корзину."""
+    try:
+        # Получаем ID продукта и количество из формы
+        product_id = int(request.form.get("product_id"))
+        count = int(request.form.get("count", 1))  # Получаем количество товара (по умолчанию 1)
+
+        # Проверка наличия аутентифицированного пользователя
+        if not session.get("user_id"):
+            flash("Необходимо войти в систему.")
+            return redirect(url_for("login"))  # Перенаправляем на страницу авторизации
+
+        # Соединение с базой данных
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            # Запись заказа в базу данных
+            cur.execute(
+                "INSERT INTO orders (product_id, user_id, count) VALUES (%s, %s, %s)",
+                (product_id, session.get("user_id"), count),  # Тут используем количество из формы
+            )
+            conn.commit()
+
+        flash("Товар успешно добавлен в корзину!")
+        return redirect(url_for("home"))  # Возвращаемся обратно на главную страницу
+
+    except Exception as e:
+        print(f"Ошибка при добавлении товара в корзину: {e}")
+        flash("Возникла ошибка при добавлении товара в корзину.")
+        return redirect(url_for("home"))
+
 
 @app.route('/add_product', methods=['GET', 'POST'])
 def add_product():  
@@ -455,6 +487,74 @@ def edit_product(id):
                 old_image_url = request.form.get('old_image_url')  # Предположительно старое изображение передается в форме
                 new_image_url = old_image_url
                 return redirect(url_for('home'))
+
+@app.route('/cart')
+def cart():
+    """
+    Страница корзины товаров.
+    Здесь реализован вывод содержимого корзины.
+    """
+    # Проверяем, залогинен ли пользователь
+    if 'user_id' not in session:
+        flash('Необходимо войти в систему.', 'warning')
+        return redirect(url_for('login'))
+
+    # Подключаемся к базе данных
+    with get_db_connection() as conn:
+        cur = conn.cursor()
+        # Получаем товары из корзины текущего пользователя
+        cur.execute("""
+            SELECT p.title AS name, o.count AS quantity, p.price AS price, 
+                   o.count * p.price AS total_price
+            FROM orders o
+            JOIN products p ON o.product_id = p.product_id
+            WHERE o.user_id = %s
+            ORDER BY o.order_id ASC
+        """, (session['user_id'], ))
+
+        rows = cur.fetchall()
+
+    # Готовим данные для шаблона
+    cart_items = []
+    total_sum = 0.0
+    for row in rows:
+        name, quantity, price, total_price = row
+        cart_items.append({
+            'name': name,
+            'quantity': quantity,
+            'price': float(price),
+            'total_price': float(total_price)
+        })
+        total_sum += total_price
+
+    # Рендерим шаблон, передавая товары и итоговую сумму
+    return render_template("cart.html", cart_items=cart_items, total_sum=total_sum)
+
+@app.route('/remove-from-cart', methods=['POST'])
+def remove_from_cart():
+    """Удаляет товар из корзины"""
+    try:
+        # Получаем ID заказа из формы
+        order_id = int(request.form.get("order_id"))
+
+        # Проверка наличия аутентифицированного пользователя
+        if not session.get("user_id"):
+            flash("Необходимо войти в систему.", "warning")
+            return redirect(url_for("login"))
+
+        # Удаляем товар из корзины
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM orders WHERE order_id = %s", (order_id,))
+            conn.commit()
+
+        flash("Товар успешно удалён из корзины!", "info")
+        return redirect(url_for("cart"))
+
+    except Exception as e:
+        print(f"Ошибка при удалении товара из корзины: {e}")
+        flash("Возникла ошибка при удалении товара из корзины.", "danger")
+        return redirect(url_for("cart"))
 
 if __name__ == '__main__':
     app.run(debug=True)

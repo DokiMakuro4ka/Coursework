@@ -1,0 +1,77 @@
+/* Общие настройки */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    color: #333;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+}
+
+/* Шапка страницы */
+header h1 {
+    text-align: center;
+    font-size: 2em;
+    letter-spacing: 1px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+    background-color: #fff;
+    padding: 1rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Основной контент */
+main {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 10px; /* Добавляем скругление углов контейнера */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Список товаров */
+.product-list table {
+    width: 100%;
+    border-collapse: collapse;
+    overflow-x: scroll;
+}
+
+.product-list th, .product-list td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.product-list thead {
+    background-color: #007bff;
+    color: white;
+}
+
+/* Итоговая сумма */
+.summary-box {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background-color: #F8F8FF;
+    padding: 10px 20px;
+    border-radius: 0 0 10px 0; /* Округляем нижний правый угол */
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Кнопка оформления заказа */
+.checkout-btn {
+    display: block;
+    margin-top: 10px;
+    padding: 10px 20px;
+    font-size: 1.2em;
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.checkout-btn:hover {
+    background-color: #0056b3;
+}

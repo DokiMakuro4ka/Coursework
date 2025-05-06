@@ -77,8 +77,17 @@ function createProductCard(title, description, price, imgUrl, fullDescription, l
         editButton.className = 'edit-btn';
         editButton.textContent = 'Редактировать';
         editButton.dataset.id = productId;
-        editButton.onclick = function() {
-            editProduct(productId); // Вызов функции редактирования
+        editButton.onclick = function(event) {
+            event.preventDefault();
+            
+            // Получение текущего идентификатора товара
+            const currentProductId = this.dataset.id;
+            
+            // Формирование URL перехода
+            const editUrl = '/edit_product/' + currentProductId;
+            
+            // Переход на страницу редактирования
+            window.location.href = editUrl;
         };
 
         // Кнопка удаления

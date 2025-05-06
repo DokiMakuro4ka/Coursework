@@ -12,28 +12,34 @@
             <a href="/" class="logo"><img src="templates/logo.png" alt="Логотип" width="40" height="40"></a>
         </div>
         <h1>DokiTory</h1>
-        <div class="user-container">
+        <div class="cart-and-user-container">
             {% if session.get('logged_in') %}
-                <div class="user-icon logged-in" onclick="togglePopup()">
-                    <img src="{{ avatar_url }}" alt="Аватарка пользователя" width="40" height="40">
-                </div>
-            {% else %}
-                <div class="user-icon" onclick="togglePopup()">
-                    <img src="templates/default_avatar.png" alt="Иконка пользователя" width="40" height="40">
-                </div>
+                <a href="/cart" class="cart-button">Корзина</a>
             {% endif %}
+            <div class="user-container">
+                {% if session.get('logged_in') %}
+                    <div class="user-icon logged-in" onclick="togglePopup()">
+                        <img src="{{ avatar_url }}" alt="Аватарка пользователя" width="40" height="40">
+                    </div>
+                {% else %}
+                    <div class="user-icon" onclick="togglePopup()">
+                        <img src="templates/default_avatar.png" alt="Иконка пользователя" width="40" height="40">
+                    </div>
+                {% endif %}
+            </div>
         </div>
         <ul id="popup-menu" class="hidden">
             {% if not session.get('logged_in') %}
                 <li><a href="/reg">Зарегистрироваться</a></li>
                 <li><a href="/login">Войти</a></li>
             {% else %}
+                <li><a href="/cart">Корзина</a><li>
                 <li><a href="/logout">Выход</a></li>
             {% endif %}
             <li><a href="/">Главная</a></li>
             <li><a href="/profile">Профиль</a></li>
         </ul>
-    </header>   
+    </header>
 
     <main>
         <section>

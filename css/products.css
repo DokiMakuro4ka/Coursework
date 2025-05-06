@@ -142,3 +142,36 @@ h1 {
 #popup-menu li a:hover {
     text-decoration: underline;
 }
+
+.count-input {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.count-input label {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.count-input input[type="number"] {
+    appearance: none;
+    outline: none;
+    border: 1px solid #ccc;
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-size: 16px;
+    width: 60px;
+    text-align: center;
+}
+
+.count-input input[type="number"]::-webkit-inner-spin-button,
+.count-input input[type="number"]::-webkit-outer-spin-button {
+    opacity: 1;
+}
+
+.count-input input[type="number"]:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}

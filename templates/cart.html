@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Корзина покупок</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/cart.css') }}">
+    <link rel="stylesheet" href='css/cart.css'>
 </head>
 <body>
     <header>
@@ -20,15 +20,22 @@
                         <th>Цена (₽)</th>
                         <th>Количество</th>
                         <th>Общая сумма (₽)</th>
+                        <th>Удалить</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in cart_items %}
                         <tr>
                             <td>{{ item.name }}</td>
-                            <td>{{ '%.2f'|format(item.price)}} ₽</td>
+                            <td>{{ '%.2f'|format(item.price) }} ₽</td>
                             <td>{{ item.quantity }} шт.</td>
-                            <td>{{ '%.2f'|format(item.total_price)}} ₽</td>
+                            <td>{{ '%.2f'|format(item.total_price) }} ₽</td>
+                            <td>
+                                <form method="POST" action="/remove-from-cart">
+                                    <input type="hidden" name="order_id" value="{{ item.order_id }}">
+                                    <button type="submit" class="delete-item">Удалить</button>
+                                </form>
+                            </td>
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -36,7 +43,7 @@
         </section>
 
         <footer>
-            <p>Итоговая сумма: {{ '%.2f'|format(total_sum)}} ₽</p>
+            <p>Итоговая сумма: {{ '%.2f'|format(total_sum) }} ₽</p>
             <button class="checkout-btn">Оформить заказ</button>
         </footer>
     </main>

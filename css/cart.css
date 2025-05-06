@@ -75,3 +75,20 @@ main {
 .checkout-btn:hover {
     background-color: #0056b3;
 }
+
+.btn-back-home {
+    display: inline-block;
+    padding: 8px 16px;
+    font-size: 16px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px; /* Слегка скруглённые углы */
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.btn-back-home:hover {
+    background-color: #0056b3;
+}

@@ -33,34 +33,40 @@ h1 {
     margin: 0;
 }
 
-/* Контейнер для корзины и пользователя */
-.cart-and-user-container {
+/* Блок с аватаркой и кнопками */
+.right-side {
     display: flex;
-    align-items: center; /* Центрирование по вертикали */
+    align-items: center;
 }
 
-/* Кнопка корзины */
-.cart-button {
+/* Группа кнопок "Корзина" и "Заказы" */
+.grouped-buttons {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Интервал между кнопками */
+}
+
+/* Базовые стили для обеих кнопок */
+.cart-button, .orders-button {
     display: inline-block;
     padding: 10px 20px;
-    background-color: blue; /* Фоновое заполнение кнопки */
-    color: white;           /* Белые буквы текста */
-    text-decoration: none;  /* Без подчеркивания */
-    border-radius: 5px;     /* Закругленные уголки */
-    font-weight: bold;      /* Жирный шрифт */
-    margin-right: 10px;     /* Правый отступ для удобной визуализации */
-    transition: all 0.3s ease; /* Эффекты анимации */
+    background-color: #007bff; /* Голубой цвет фона */
+    color: white;
+    text-decoration: none;
+    border-radius: 5px; /* Закруглённые углы */
+    font-weight: bold;
+    transition: all 0.3s ease;
 }
 
-.cart-button:hover {
-    background-color: darkblue; /* Меняем цвет при наведении мыши */
-    transform: scale(1.05);      /* Небольшое увеличение размера */
+/* Наведение на обе кнопки */
+.cart-button:hover, .orders-button:hover {
+    background-color: #0056b3; /* Более тёмный голубой цвет при наведении */
+    transform: scale(1.05); /* Легкий эффект увеличения */
 }
 
 /* Пользовательская иконка */
 .user-container {
-    display: inline-block;
-    vertical-align: middle;
+    margin-left: 10px; /* Минимальный отступ от кнопок */
 }
 
 .user-icon img {
@@ -75,7 +81,7 @@ h1 {
     position: absolute;
     top: 55px; /* Позиция под иконкой пользователя */
     right: 20px; /* Выравниваем по правому краю */
-    background-color: rgba(0, 0, 0, 0.5); /* Полупрозрачный черный фон */
+    background-color: rgba(0, 0, 0, 0.5); /* Полупрозрачный чёрный фон */
     color: white; /* Белые буквы */
     padding: 10px;
     border-radius: 5px;
@@ -123,7 +129,7 @@ main h2 {
 /* Общая ширина карточки товара */
 .product-card {
     display: inline-block;
-    width: calc(33% - 20px); /* Ширина трех колонок с промежутками */
+    width: calc(33% - 20px); /* Ширина трёх колонок с промежутками */
     vertical-align: top;
     margin: 10px;
     background-color: white;
@@ -151,6 +157,7 @@ main h2 {
 .product-image:hover {
     transform: scale(1.1); /* Увеличение изображения при наведении */
 }
+
 
 /* Заголовок товара */
 .product-card h3 {

@@ -490,10 +490,7 @@ def edit_product(id):
 
 @app.route('/cart')
 def cart():
-    """
-    Страница корзины товаров.
-    Здесь реализован вывод содержимого корзины.
-    """
+    """Отображает содержимое корзины пользователя."""
     # Проверяем, залогинен ли пользователь
     if 'user_id' not in session:
         flash('Необходимо войти в систему.', 'warning')
@@ -505,7 +502,7 @@ def cart():
         # Получаем товары из корзины текущего пользователя
         cur.execute("""
             SELECT p.title AS name, o.count AS quantity, p.price AS price, 
-                   o.count * p.price AS total_price
+                   o.count * p.price AS total_price, o.order_id AS order_id
             FROM orders o
             JOIN products p ON o.product_id = p.product_id
             WHERE o.user_id = %s
@@ -514,20 +511,20 @@ def cart():
 
         rows = cur.fetchall()
 
-    # Готовим данные для шаблона
+    # Подготовим массив объектов для передачи в шаблон
     cart_items = []
     total_sum = 0.0
     for row in rows:
-        name, quantity, price, total_price = row
+        name, quantity, price, total_price, order_id = row
         cart_items.append({
             'name': name,
             'quantity': quantity,
             'price': float(price),
-            'total_price': float(total_price)
+            'total_price': float(total_price),
+            'order_id': order_id  # Включаем order_id в объект
         })
         total_sum += total_price
 
-    # Рендерим шаблон, передавая товары и итоговую сумму
     return render_template("cart.html", cart_items=cart_items, total_sum=total_sum)
 
 @app.route('/remove-from-cart', methods=['POST'])

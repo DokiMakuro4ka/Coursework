@@ -1,10 +1,54 @@
+Проблема может возникать, если поле с идентификатором заказа (order_id) не попадает в запрос POST или неправильно обрабатывается в Flask.
+
+Проверяйте следующее:
+
+Присутствует ли hidden-поле с правильным значением в форме?
+
+В HTML-теге формы должен присутствовать скрытый ввод (input type="hidden"), который отправляет идентификатор заказа (order_id):
+
+<form method="POST" action="/remove-from-cart">
+    <input type="hidden" name="order_id" value="{{ item.order_id }}">
+    <button type="submit" class="delete-item">Удалить</button>
+</form>
+
+Убедитесь, что поле value="{{ item.order_id }}" содержит правильный идентификатор заказа. Иногда бывает, что в цикле Jinja вывод некорректный, и значение item.order_id оказывается пустым или неопределённым.
+
+
+Правильно ли парсится запрос в Flask?
+
+На стороне Flask нужно убедиться, что идентификатор заказа получается корректно:
+
+@app.route('/remove-from-cart', methods=['POST'])
+def remove_from_cart():
+    try:
+        # Получаем ID заказа из формы
+        order_id = int(request.form.get("order_id"))
+        
+        # Остальная логика обработки заказа
+    except ValueError:
+        flash("Невозможно обработать заказ. Проверьте правильность данных.", "danger")
+        return redirect(url_for("cart"))
+
+Здесь используется request.form.get("order_id"), чтобы получить значение поля order_id из формы. Если поле не найдено или его значение некорректно, будет выброшено исключение ValueError.
+
+
+Проверка значений перед отправкой запроса:
+
+Посмотрите на исходящий запрос с помощью инструментов разработчика браузера (обычно вкладка Network > XHR). Убедитесь, что данные отправляются корректно и включают значение поля order_id.
+
+Пример полного решения:
+
+Вот финальный исправленный вариант с возможными изменениями и дополнительной защитой:
+
+HTML-шаблон:
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Корзина покупок</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/cart.css') }}">
+    <link rel="stylesheet" href='css/cart.css'>
 </head>
 <body>
     <header>
@@ -20,15 +64,22 @@
                         <th>Цена (₽)</th>
                         <th>Количество</th>
                         <th>Общая сумма (₽)</th>
+                        <th>Удалить</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in cart_items %}
                         <tr>
                             <td>{{ item.name }}</td>
-                            <td>{{ '%.2f'|format(item.price)}} ₽</td>
+                            <td>{{ '%.2f'|format(item.price) }} ₽</td>
                             <td>{{ item.quantity }} шт.</td>
-                            <td>{{ '%.2f'|format(item.total_price)}} ₽</td>
+                            <td>{{ '%.2f'|format(item.total_price) }} ₽</td>
+                            <td>
+                                <form method="POST" action="/remove-from-cart">
+                                    <input type="hidden" name="order_id" value="{{ item.order_id }}">
+                                    <button type="submit" class="delete-item">Удалить</button>
+                                </form>
+                            </td>
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -36,9 +87,48 @@
         </section>
 
         <footer>
-            <p>Итоговая сумма: {{ '%.2f'|format(total_sum)}} ₽</p>
+            <p>Итоговая сумма: {{ '%.2f'|format(total_sum) }} ₽</p>
             <button class="checkout-btn">Оформить заказ</button>
         </footer>
     </main>
 </body>
 </html>
+
+Flask-роут:
+
+@app.route('/remove-from-cart', methods=['POST'])
+def remove_from_cart():
+    """Удаляет товар из корзины"""
+    try:
+        # Получаем ID заказа из формы
+        order_id = int(request.form.get("order_id"))
+        
+        # Проверка наличия аутентифицированного пользователя
+        if not session.get("user_id"):
+            flash("Необходимо войти в систему.", "warning")
+            return redirect(url_for("login"))
+
+        # Удаляем товар из корзины
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM orders WHERE order_id = %s", (order_id,))
+            conn.commit()
+
+        flash("Товар успешно удалён из корзины!", "info")
+        return redirect(url_for("cart"))
+
+    except ValueError:
+        flash("Ошибка: невозможно распознать номер заказа.", "danger")
+        return redirect(url_for("cart"))
+
+    except Exception as e:
+        print(f"Ошибка при удалении товара из корзины: {e}")
+        flash("Возникла ошибка при удалении товара из корзины.", "danger")
+        return redirect(url_for("cart"))
+
+Что проверить дополнительно:
+
+Проверьте, существует ли столбец order_id в таблице orders и корректно ли он формируется в модели.
+Если идентификатор заказа отсутствует, попробуйте вручную проверить, какие данные передаются браузером, открыв консоль разработчика (Network tab) и посмотрев тело запроса.
+
+Если соблюдать эти рекомендации, проблем с передачей и обработкой order_id быть не должно.

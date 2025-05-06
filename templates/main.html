@@ -12,10 +12,13 @@
             <a href="/" class="logo"><img src="templates/logo.png" alt="Логотип" width="40" height="40"></a>
         </div>
         <h1>DokiTory</h1>
-        <div class="cart-and-user-container">
-            {% if session.get('logged_in') %}
-                <a href="/cart" class="cart-button">Корзина</a>
-            {% endif %}
+        <div class="right-side">
+            <div class="cart-and-user-container">
+                {% if session.get('logged_in') %}
+                    <a href="/cart" class="cart-button">Корзина</a>
+                    <a href="/orders" class="orders-button">Заказы</a>
+                {% endif %}
+            </div>
             <div class="user-container">
                 {% if session.get('logged_in') %}
                     <div class="user-icon logged-in" onclick="togglePopup()">
@@ -34,6 +37,7 @@
                 <li><a href="/login">Войти</a></li>
             {% else %}
                 <li><a href="/cart">Корзина</a><li>
+                <li><a href="/orders">Заказы</a></li>
                 <li><a href="/logout">Выход</a></li>
             {% endif %}
             <li><a href="/">Главная</a></li>

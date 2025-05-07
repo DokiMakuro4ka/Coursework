@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>История заказов</title>
-    <link rel="stylesheet" href="../css/orders.css">
+    <link rel="stylesheet" href="css/orders.css">
 </head>
 <body>
     <h1>История ваших заказов</h1>
@@ -27,10 +27,12 @@
                     <td>{{ order.quantity }}</td>
                     <td>{{ "%0.2f" | format(order.total_price) }} руб.</td>
                     <td>{{ order.create_at }}</td>
-                    <td>{{ order.status }}</td>
+                    <!-- Интерпретация статусов -->
+                    <td>{% if order.status == 1 %}Новый{% elif order.status == 2 %}В обработке{% elif order.status == 3 %}Выполненный{% else %}{{order.status}}{% endif %}</td>
                 </tr>
             {% endfor %}
         </tbody>
     </table>
+    <a href="/">Вернуться на главную страницу</a>
 </body>
 </html>

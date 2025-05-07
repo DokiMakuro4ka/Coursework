@@ -2,7 +2,7 @@ import hashlib
 from flask import Flask, render_template, request, redirect, url_for, abort, session, flash, jsonify
 from flask_session import Session
 from datetime import datetime
-import decimal
+from decimal import Decimal, InvalidOperation
 import psycopg2
 from werkzeug.utils import secure_filename
 import os
@@ -532,32 +532,32 @@ def cart():
 def checkout():
     if request.method == "POST":
         try:
-            # Проверяем, залогинен ли пользователь
+            # Проверка авторизации пользователя
             if not session.get("logged_in"):
                 flash('Вы должны войти в систему для оформления заказа.', 'warning')
                 return redirect(url_for('login'))
             
-            # Получаем итоговую сумму из формы
+            # Извлекаем итоговую сумму из формы
             total_sum_str = request.form.get("total_sum")
             
-            # Проверяем, что итоговая сумма передана и корректна
+            # Проверяем наличие и корректность итоговой суммы
             if not total_sum_str:
                 flash("Не удалось определить итоговую сумму заказа.", category="danger")
                 return redirect(url_for('cart'))
             
             try:
-                total_sum = decimal.Decimal(total_sum_str)
-            except decimal.InvalidOperation:
+                total_sum = Decimal(total_sum_str)
+            except InvalidOperation:
                 flash("Неверный формат итоговой суммы.", category="danger")
                 return redirect(url_for('cart'))
             
-            # Подключение к базе данных
+            # Открываем соединение с базой данных
             with get_db_connection() as conn:
                 cur = conn.cursor()
-                conn.autocommit = False  # Работаем в режиме транзакции
+                conn.autocommit = False  # Используем транзакционный режим
                 
                 try:
-                    # Получаем товары из корзины текущего пользователя
+                    # Выбираем товары из корзины текущего пользователя
                     cur.execute(
                         """
                         SELECT p.title AS product_name, c.count AS quantity, p.price AS unit_price
@@ -569,25 +569,36 @@ def checkout():
                     )
                     cart_items = cur.fetchall()
                     
-                    # Если корзина пуста, сообщаем об этом пользователю
+                    # Если корзина пуста, показываем предупреждение
                     if not cart_items:
                         flash("Корзина пуста. Оформление заказа невозможно.", category="warning")
                         return redirect(url_for('cart'))
                     
-                    # Создаем новый заказ для каждого товара в корзине
+                    # Формируем заказы для каждого товара в корзине
                     for product_name, quantity, unit_price in cart_items:
                         total_item_price = unit_price * quantity
                         
-                        # Создаем запись в таблице orders
+                        # Создаем новую запись в таблице orders с автоматически устанавливаемым статусом "В обработке" (статус = 2)
                         cur.execute(
                             """
-                            INSERT INTO orders (user_id, product_name, quantity, total_price, created_at)
-                            VALUES (%s, %s, %s, %s, %s)
+                            INSERT INTO orders (
+                                user_id,
+                                product_name,
+                                quantity,
+                                total_price,
+                                status_id,
+                                created_at
+                            ) VALUES (%s, %s, %s, %s, %s, %s)
                             """,
-                            (session["user_id"], product_name, quantity, total_item_price, datetime.now())
+                            (session["user_id"],
+                             product_name,
+                             quantity,
+                             total_item_price,
+                             2,  # Автоматически добавляем статус "В обработке"
+                             datetime.now())
                         )
                     
-                    # Очищаем корзину после оформления заказа
+                    # Очищаем корзину после успешного оформления заказа
                     cur.execute(
                         """
                         DELETE FROM cart
@@ -596,13 +607,14 @@ def checkout():
                         (session["user_id"],)
                     )
                     
-                    # Фиксируем транзакцию
+                    # Сохраняем изменения в базу данных
                     conn.commit()
                     
                     flash("Ваш заказ успешно оформлен!", category="success")
-                    return redirect(url_for('index'))
+                    return redirect(url_for('home'))
                 
                 except Exception as e:
+                    # Откатываем транзакцию в случае ошибок
                     conn.rollback()
                     print(f"Ошибка при оформлении заказа: {e}")
                     flash("При оформлении заказа возникла проблема.", category="danger")
@@ -675,6 +687,35 @@ def get_orders():
     ]
 
     return render_template('orders.html', orders=orders_data)
+
+@app.route('/history', methods=['GET'])
+def history():
+    # Проверяем, залогинен ли пользователь
+    if not session.get("logged_in"):
+        flash('Вам необходимо войти в систему!', 'warning')
+        return redirect(url_for('login'))
+    
+    # Подключаемся к базе данных
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    # Выполняем запрос с сортировкой по дате заказа
+    cur.execute("""
+        SELECT id, product_name, quantity, total_price, created_at, status
+        FROM orders
+        WHERE user_id=%s
+        ORDER BY created_at DESC
+    """, (session["user_id"],))
+    
+    # Берём все полученные заказы
+    orders = cur.fetchall()
+    
+    # Закрываем подключение
+    cur.close()
+    conn.close()
+    
+    # Передаём данные в шаблон
+    return render_template('orders.html', orders=orders)
 
 
 if __name__ == '__main__':

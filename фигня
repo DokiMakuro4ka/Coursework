@@ -1,134 +1,140 @@
-Проблема может возникать, если поле с идентификатором заказа (order_id) не попадает в запрос POST или неправильно обрабатывается в Flask.
+Учитывая вашу структуру таблицы orders, вижу, что ваша таблица уже объединяет информацию о самом заказе и деталях заказа (продуктах и их количестве). Значит, отдельная таблица order_items вам не нужна, и данные можно получить напрямую из таблицы orders.
 
-Проверяйте следующее:
+Давайте построим SQL-запрос, который выберет нужные данные исходя из данной структуры.
 
-Присутствует ли hidden-поле с правильным значением в форме?
+Ваша структура таблицы orders:
 
-В HTML-теге формы должен присутствовать скрытый ввод (input type="hidden"), который отправляет идентификатор заказа (order_id):
+order_id: Уникальный идентификатор заказа.
+user_id: Идентификатор пользователя, совершившего покупку.
+product_name: Название продукта.
+quantity: Количество товара.
+total_price: Общая стоимость заказа.
+create_at: Дата создания заказа.
+status_id: Внешний ключ на таблицу статусов заказов.
 
-<form method="POST" action="/remove-from-cart">
-    <input type="hidden" name="order_id" value="{{ item.order_id }}">
-    <button type="submit" class="delete-item">Удалить</button>
-</form>
+Задача:
 
-Убедитесь, что поле value="{{ item.order_id }}" содержит правильный идентификатор заказа. Иногда бывает, что в цикле Jinja вывод некорректный, и значение item.order_id оказывается пустым или неопределённым.
+Нужно выбрать историю заказов для текущего пользователя, объединив данные из таблицы orders и таблицы статусов order_status, и вернуть результат в нужном формате.
 
+SQL-запрос:
 
-Правильно ли парсится запрос в Flask?
+Теперь составим SQL-запрос, соответствующий вашему дизайну:
 
-На стороне Flask нужно убедиться, что идентификатор заказа получается корректно:
+with get_db_connection() as conn:
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT o.order_id, o.product_name, o.quantity, o.total_price, o.create_at, os.status_name
+        FROM orders o
+        INNER JOIN order_status os ON o.status_id = os.status_id
+        WHERE o.user_id = %s
+        ORDER BY o.create_at DESC
+    """, (session["user_id"],))
+    results = cur.fetchall()
 
-@app.route('/remove-from-cart', methods=['POST'])
-def remove_from_cart():
-    try:
-        # Получаем ID заказа из формы
-        order_id = int(request.form.get("order_id"))
-        
-        # Остальная логика обработки заказа
-    except ValueError:
-        flash("Невозможно обработать заказ. Проверьте правильность данных.", "danger")
-        return redirect(url_for("cart"))
+Анализ результата:
 
-Здесь используется request.form.get("order_id"), чтобы получить значение поля order_id из формы. Если поле не найдено или его значение некорректно, будет выброшено исключение ValueError.
+Результатом запроса будет список заказов с такими данными:
 
+Номер заказа (order_id)
+Название товара (product_name)
+Количество товара (quantity)
+Общая стоимость заказа (total_price)
+Дата создания заказа (create_at)
+Текущий статус заказа (status_name)
 
-Проверка значений перед отправкой запроса:
+Преобразование данных для шаблона:
 
-Посмотрите на исходящий запрос с помощью инструментов разработчика браузера (обычно вкладка Network > XHR). Убедитесь, что данные отправляются корректно и включают значение поля order_id.
+Далее преобразуем полученный результат в нужный формат для передачи в шаблон:
 
-Пример полного решения:
+orders_data = [
+    {
+        "order_id": row[0],
+        "product_name": row[1],
+        "quantity": row[2],
+        "total_price": row[3],
+        "create_at": row[4].strftime('%Y-%m-%d'),  # Форматируем дату
+        "status": row[5]
+    }
+    for row in results
+]
 
-Вот финальный исправленный вариант с возможными изменениями и дополнительной защитой:
+Ваш финальный обработчик /orders:
 
-HTML-шаблон:
+@app.route('/orders', methods=['GET'])
+def get_orders():
+    # Проверяем, залогинен ли пользователь
+    if not session.get("logged_in"):
+        flash('Вы должны войти в систему.', 'warning')
+        return redirect(url_for('login'))
+
+    # Получаем историю заказов из базы данных
+    with get_db_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT o.order_id, o.product_name, o.quantity, o.total_price, o.create_at, os.status_name
+            FROM orders o
+            INNER JOIN order_status os ON o.status_id = os.status_id
+            WHERE o.user_id = %s
+            ORDER BY o.create_at DESC
+        """, (session["user_id"],))
+        results = cur.fetchall()
+
+    # Преобразуем данные в удобный формат для шаблона
+    orders_data = [
+        {
+            "order_id": row[0],
+            "product_name": row[1],
+            "quantity": row[2],
+            "total_price": row[3],
+            "create_at": row[4].strftime('%Y-%m-%d'),
+            "status": row[5]
+        }
+        for row in results
+    ]
+
+    return render_template('orders.html', orders=orders_data)
+
+Шаблон orders.html:
+
+Модифицируйте шаблон для отображения данных о заказах:
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Корзина покупок</title>
-    <link rel="stylesheet" href='css/cart.css'>
+    <title>История заказов</title>
+    <link rel="stylesheet" href="../css/orders.css">
 </head>
 <body>
-    <header>
-        <h1>Корзина покупок</h1>
-    </header>
-    
-    <main>
-        <section class="product-list">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Название продукта</th>
-                        <th>Цена (₽)</th>
-                        <th>Количество</th>
-                        <th>Общая сумма (₽)</th>
-                        <th>Удалить</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in cart_items %}
-                        <tr>
-                            <td>{{ item.name }}</td>
-                            <td>{{ '%.2f'|format(item.price) }} ₽</td>
-                            <td>{{ item.quantity }} шт.</td>
-                            <td>{{ '%.2f'|format(item.total_price) }} ₽</td>
-                            <td>
-                                <form method="POST" action="/remove-from-cart">
-                                    <input type="hidden" name="order_id" value="{{ item.order_id }}">
-                                    <button type="submit" class="delete-item">Удалить</button>
-                                </form>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </section>
-
-        <footer>
-            <p>Итоговая сумма: {{ '%.2f'|format(total_sum) }} ₽</p>
-            <button class="checkout-btn">Оформить заказ</button>
-        </footer>
-    </main>
+    <h1>История ваших заказов</h1>
+    <table id="orders-table">
+        <thead>
+            <tr>
+                <th>Номер заказа</th>
+                <th>Продукт</th>
+                <th>Количество</th>
+                <th>Стоимость</th>
+                <th>Дата заказа</th>
+                <th>Статус</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+                <tr>
+                    <td>{{ order.order_id }}</td>
+                    <td>{{ order.product_name }}</td>
+                    <td>{{ order.quantity }}</td>
+                    <td>{{ "%0.2f" | format(order.total_price) }} руб.</td>
+                    <td>{{ order.create_at }}</td>
+                    <td>{{ order.status }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </body>
 </html>
 
-Flask-роут:
+Итог:
 
-@app.route('/remove-from-cart', methods=['POST'])
-def remove_from_cart():
-    """Удаляет товар из корзины"""
-    try:
-        # Получаем ID заказа из формы
-        order_id = int(request.form.get("order_id"))
-        
-        # Проверка наличия аутентифицированного пользователя
-        if not session.get("user_id"):
-            flash("Необходимо войти в систему.", "warning")
-            return redirect(url_for("login"))
-
-        # Удаляем товар из корзины
-        with get_db_connection() as conn:
-            cur = conn.cursor()
-            cur.execute("DELETE FROM orders WHERE order_id = %s", (order_id,))
-            conn.commit()
-
-        flash("Товар успешно удалён из корзины!", "info")
-        return redirect(url_for("cart"))
-
-    except ValueError:
-        flash("Ошибка: невозможно распознать номер заказа.", "danger")
-        return redirect(url_for("cart"))
-
-    except Exception as e:
-        print(f"Ошибка при удалении товара из корзины: {e}")
-        flash("Возникла ошибка при удалении товара из корзины.", "danger")
-        return redirect(url_for("cart"))
-
-Что проверить дополнительно:
-
-Проверьте, существует ли столбец order_id в таблице orders и корректно ли он формируется в модели.
-Если идентификатор заказа отсутствует, попробуйте вручную проверить, какие данные передаются браузером, открыв консоль разработчика (Network tab) и посмотрев тело запроса.
-
-Если соблюдать эти рекомендации, проблем с передачей и обработкой order_id быть не должно.
+Теперь ваши данные аккуратно отображаются в таблице, и страница истории заказов готова к использованию. Главное — проверьте правильность имен полей и таблиц в запросе, чтобы он соответствовал вашей реальной схеме базы данных.

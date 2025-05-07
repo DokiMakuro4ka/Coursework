@@ -44,8 +44,15 @@
         </section>
 
         <footer>
-            <p>Итоговая сумма: {{ '%.2f'|format(total_sum) }} ₽</p>
-            <button class="checkout-btn">Оформить заказ</button>
+            <form method="POST" action="/checkout">
+                <!-- Скрытое поле для передачи итоговой суммы -->
+                <input type="hidden" name="total_sum" value="{{ '%.2f'%total_sum }}">
+            
+                <!-- Видимый блок с итоговой суммой -->
+                <div style="margin-bottom: 10px; font-weight: bold;">Итоговая сумма: {{ '%.2f'%total_sum }} ₽</div>
+            
+                <button class="checkout-btn">Оформить заказ</button>
+            </form>
         </footer>
     </main>
 </body>

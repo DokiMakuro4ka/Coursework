@@ -1,6 +1,8 @@
 import hashlib
 from flask import Flask, render_template, request, redirect, url_for, abort, session, flash, jsonify
 from flask_session import Session
+from datetime import datetime
+import decimal
 import psycopg2
 from werkzeug.utils import secure_filename
 import os
@@ -374,7 +376,7 @@ def add_to_cart():
             cur = conn.cursor()
             # Запись заказа в базу данных
             cur.execute(
-                "INSERT INTO orders (product_id, user_id, count) VALUES (%s, %s, %s)",
+                "INSERT INTO cart (product_id, user_id, count) VALUES (%s, %s, %s)",
                 (product_id, session.get("user_id"), count),  # Тут используем количество из формы
             )
             conn.commit()
@@ -386,7 +388,6 @@ def add_to_cart():
         print(f"Ошибка при добавлении товара в корзину: {e}")
         flash("Возникла ошибка при добавлении товара в корзину.")
         return redirect(url_for("home"))
-
 
 @app.route('/add_product', methods=['GET', 'POST'])
 def add_product():  
@@ -503,7 +504,7 @@ def cart():
         cur.execute("""
             SELECT p.title AS name, o.count AS quantity, p.price AS price, 
                    o.count * p.price AS total_price, o.order_id AS order_id
-            FROM orders o
+            FROM cart o
             JOIN products p ON o.product_id = p.product_id
             WHERE o.user_id = %s
             ORDER BY o.order_id ASC
@@ -521,11 +522,99 @@ def cart():
             'quantity': quantity,
             'price': float(price),
             'total_price': float(total_price),
-            'order_id': order_id  # Включаем order_id в объект
+            'order_id': order_id
         })
         total_sum += total_price
 
     return render_template("cart.html", cart_items=cart_items, total_sum=total_sum)
+
+@app.route("/checkout", methods=["POST"])
+def checkout():
+    if request.method == "POST":
+        try:
+            # Проверяем, залогинен ли пользователь
+            if not session.get("logged_in"):
+                flash('Вы должны войти в систему для оформления заказа.', 'warning')
+                return redirect(url_for('login'))
+            
+            # Получаем итоговую сумму из формы
+            total_sum_str = request.form.get("total_sum")
+            
+            # Проверяем, что итоговая сумма передана и корректна
+            if not total_sum_str:
+                flash("Не удалось определить итоговую сумму заказа.", category="danger")
+                return redirect(url_for('cart'))
+            
+            try:
+                total_sum = decimal.Decimal(total_sum_str)
+            except decimal.InvalidOperation:
+                flash("Неверный формат итоговой суммы.", category="danger")
+                return redirect(url_for('cart'))
+            
+            # Подключение к базе данных
+            with get_db_connection() as conn:
+                cur = conn.cursor()
+                conn.autocommit = False  # Работаем в режиме транзакции
+                
+                try:
+                    # Получаем товары из корзины текущего пользователя
+                    cur.execute(
+                        """
+                        SELECT p.title AS product_name, c.count AS quantity, p.price AS unit_price
+                        FROM cart c
+                        JOIN products p ON c.product_id = p.product_id
+                        WHERE c.user_id = %s
+                        """,
+                        (session["user_id"],)
+                    )
+                    cart_items = cur.fetchall()
+                    
+                    # Если корзина пуста, сообщаем об этом пользователю
+                    if not cart_items:
+                        flash("Корзина пуста. Оформление заказа невозможно.", category="warning")
+                        return redirect(url_for('cart'))
+                    
+                    # Создаем новый заказ для каждого товара в корзине
+                    for product_name, quantity, unit_price in cart_items:
+                        total_item_price = unit_price * quantity
+                        
+                        # Создаем запись в таблице orders
+                        cur.execute(
+                            """
+                            INSERT INTO orders (user_id, product_name, quantity, total_price, created_at)
+                            VALUES (%s, %s, %s, %s, %s)
+                            """,
+                            (session["user_id"], product_name, quantity, total_item_price, datetime.now())
+                        )
+                    
+                    # Очищаем корзину после оформления заказа
+                    cur.execute(
+                        """
+                        DELETE FROM cart
+                        WHERE user_id = %s
+                        """,
+                        (session["user_id"],)
+                    )
+                    
+                    # Фиксируем транзакцию
+                    conn.commit()
+                    
+                    flash("Ваш заказ успешно оформлен!", category="success")
+                    return redirect(url_for('index'))
+                
+                except Exception as e:
+                    conn.rollback()
+                    print(f"Ошибка при оформлении заказа: {e}")
+                    flash("При оформлении заказа возникла проблема.", category="danger")
+                    return redirect(url_for('cart'))
+                
+                finally:
+                    cur.close()
+        
+        except Exception as e:
+            print(f"Ошибка при оформлении заказа: {e}")
+            flash("При оформлении заказа возникла проблема.", category="danger")
+            return redirect(url_for('cart'))
 
 @app.route('/remove-from-cart', methods=['POST'])
 def remove_from_cart():
@@ -542,7 +631,7 @@ def remove_from_cart():
         # Удаляем товар из корзины
         with get_db_connection() as conn:
             cur = conn.cursor()
-            cur.execute("DELETE FROM orders WHERE order_id = %s", (order_id,))
+            cur.execute("DELETE FROM cart WHERE order_id = %s", (order_id,))
             conn.commit()
 
         flash("Товар успешно удалён из корзины!", "info")
@@ -552,6 +641,41 @@ def remove_from_cart():
         print(f"Ошибка при удалении товара из корзины: {e}")
         flash("Возникла ошибка при удалении товара из корзины.", "danger")
         return redirect(url_for("cart"))
+
+@app.route('/orders', methods=['GET'])
+def get_orders():
+    # Проверяем, залогинен ли пользователь
+    if not session.get("logged_in"):
+        flash('Вы должны войти в систему.', 'warning')
+        return redirect(url_for('login'))
+
+    # Получаем историю заказов из базы данных
+    with get_db_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT o.order_id, o.product_name, o.quantity, o.total_price, o.created_at, os.status_id
+            FROM orders o
+            INNER JOIN order_status os ON o.status_id = os.status_id
+            WHERE o.user_id = %s
+            ORDER BY o.created_at DESC
+        """, (session["user_id"],))
+        results = cur.fetchall()
+
+    # Преобразуем данные в удобный формат для шаблона
+    orders_data = [
+        {
+            "order_id": row[0],
+            "product_name": row[1],
+            "quantity": row[2],
+            "total_price": row[3],
+            "create_at": row[4].strftime('%Y-%m-%d'),
+            "status": row[5]
+        }
+        for row in results
+    ]
+
+    return render_template('orders.html', orders=orders_data)
+
 
 if __name__ == '__main__':
     app.run(debug=True)

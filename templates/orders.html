@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>История заказов</title>
+    <link rel="stylesheet" href="../css/orders.css">
+</head>
+<body>
+    <h1>История ваших заказов</h1>
+    <table id="orders-table">
+        <thead>
+            <tr>
+                <th>Номер заказа</th>
+                <th>Продукт</th>
+                <th>Количество</th>
+                <th>Стоимость</th>
+                <th>Дата заказа</th>
+                <th>Статус</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+                <tr>
+                    <td>{{ order.order_id }}</td>
+                    <td>{{ order.product_name }}</td>
+                    <td>{{ order.quantity }}</td>
+                    <td>{{ "%0.2f" | format(order.total_price) }} руб.</td>
+                    <td>{{ order.create_at }}</td>
+                    <td>{{ order.status }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

@@ -142,20 +142,20 @@ function EditButton(button) {
 // Функция удаления товара (ее реализация зависит от особенностей вашей архитектуры)
 function deleteProduct(productId) {
     if (window.confirm('Вы уверены, что хотите удалить этот товар?')) {
-        fetch(`/api/products/${productId}`, {
+        fetch(`/api/products/${productId}`, { // Используем шаблонную строку
             method: 'DELETE'
         })
         .then(response => {
             if (response.ok) {
                 alert('Товар успешно удалён!');
-                location.reload(); // обновляем страницу после успешной операции
+                location.reload(); // Обновляем страницу после успешной операции
             } else {
                 alert('Ошибка при удалении товара.');
             }
         })
         .catch(error => {
-            console.error('Ошибка:', error);
-            alert('Ошибка при удалении товара.');
+            console.error('Ошибка:', error); // Записываем ошибку в консоль
+            alert('Ошибка при удалении товара.'); // Сообщаем пользователю об ошибке
         });
     }
 }

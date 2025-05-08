@@ -2,27 +2,29 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- Подключаем CSS-стили -->
+    <title>Редактирование товара №{{ product.product_id }}</title>
     <link rel="stylesheet" href="/css/edit_product.css">
 </head>
 <body>
-    <h1>Редактирование товара {{product.0}}</h1>
+    <h1>Редактирование товара №{{ product.product_id }}: "{{ product.title }}"</h1>
 
-    <form action="/edit_product/{{product.0}}" method="POST" enctype="multipart/form-data">
+    <form action="/edit_product/{{ product.product_id }}" method="POST" enctype="multipart/form-data">
         <label for="title">Название:</label><br>
-        <input type="text" id="title" name="title"><br>
+        <input type="text" id="title" name="title" value="{{ product.title }}"><br>
 
         <label for="description">Описание:</label><br>
-        <textarea id="description" name="description"></textarea><br>
+        <textarea id="description" name="description">{{ product.description }}</textarea><br>
 
         <label for="price">Цена:</label><br>
-        <input type="number" step="0.01" id="price" name="price"><br>
+        <input type="number" step="0.01" id="price" name="price" value="{{ product.price }}"><br>
 
-        <label for="image_url">Ссылка на изображение:</label><br>
+        <label for="image_url">Заменить изображение:</label><br>
         <input type="file" id="image_url" name="image_url"><br>
+        {% if product.image_url %}
+            <p>Текущее изображение: <img src="{{ product.image_url }}" alt="Текущее изображение" width="100"></p>
+        {% endif %}
 
         <button type="submit">Обновить товар</button>
     </form>
-    
 </body>
 </html>

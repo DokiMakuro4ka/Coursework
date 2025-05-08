@@ -349,7 +349,36 @@ def get_products():
         'products': result,
         'user_role': user_role
     })
-    
+
+@app.route("/api/products/<int:product_id>", methods=["DELETE"])
+def delete_product(product_id):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Получаем пользователя и проверяем наличие сессии
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'message': 'Требуется авторизация'}), 401
+
+        # Можно дополнительно проверить права пользователя, если это важно
+
+        # Выполняем удаление товара
+        cur.execute("DELETE FROM products WHERE product_id=%s", (product_id,))
+        deleted_rows = cur.rowcount
+
+        if deleted_rows > 0:
+            conn.commit()
+            return jsonify({'message': 'Товар успешно удалён'})
+        else:
+            return jsonify({'message': 'Товар не найден'}), 404
+    except Exception as e:
+        print(f'Ошибка при удалении товара: {e}')
+        return jsonify({'message': 'Ошибка при удалении товара'}), 500
+    finally:
+        cur.close()
+        conn.close()
+
 @app.route('/product/<int:id>', methods=['GET'])
 def view_product(id):
     try:
@@ -392,20 +421,28 @@ def add_to_cart():
     try:
         # Получаем ID продукта и количество из формы
         product_id = int(request.form.get("product_id"))
-        count = int(request.form.get("count", 1))  # Получаем количество товара (по умолчанию 1)
+        count = int(request.form.get("count", 1))  # Количество товара (по умолчанию 1)
 
         # Проверка наличия аутентифицированного пользователя
         if not session.get("user_id"):
             flash("Необходимо войти в систему.")
             return redirect(url_for("login"))  # Перенаправляем на страницу авторизации
 
-        # Соединение с базой данных
+        # Получаем роль пользователя из базы данных
         with get_db_connection() as conn:
             cur = conn.cursor()
-            # Запись заказа в базу данных
+            cur.execute("SELECT role_id FROM users WHERE user_id=%s", (session.get("user_id"),))
+            user_role = cur.fetchone()
+
+            # Проверяем, что пользователь имеет роль администратора (role_id = 2)
+            if not user_role or user_role[0] != 2:
+                flash("Только администраторы могут добавлять товары в корзину.", "danger")
+                return redirect(url_for("home"))
+
+            # Если пользователь администратор, добавляем товар в корзину
             cur.execute(
                 "INSERT INTO cart (product_id, user_id, count) VALUES (%s, %s, %s)",
-                (product_id, session.get("user_id"), count),  # Тут используем количество из формы
+                (product_id, session.get("user_id"), count)
             )
             conn.commit()
 
@@ -473,49 +510,72 @@ def edit_product(id):
     user_role = cur.fetchone()[0]
     print('Роль: ', user_role)
     if user_role == '1':
-        flash('Вы не имеете полномочий для удаления товаров.', 'danger')
+        flash('Вы не имеете полномочий для редактирования товаров.', 'danger')
         return redirect(url_for('home'))
     else:
-        if request.method == 'GET':  # Запрашиваем данные товара
-            cur.execute("SELECT * FROM products WHERE product_id=%s;", (id,))
+        if request.method == 'GET':  # Показываем форму редактирования товара
+            cur.execute("SELECT product_id, title, description, price, image_url FROM products WHERE product_id=%s;", (id,))
             product = cur.fetchone()
             if not product:
                 flash('Товар не найден.', category='warning')
                 return redirect(url_for('home'))
             else:
-                return render_template('edit_product.html', product=product)
+                # Преобразуем кортеж в словарь для простоты использования в шаблоне
+                product_data = {
+                    'product_id': product[0],  # Первичный ключ товара
+                    'title': product[1],      # Название товара
+                    'description': product[2], # Описание товара
+                    'price': product[3],      # Цена товара
+                    'image_url': product[4]   # Адрес изображения
+                }
+                return render_template('edit_product.html', product=product_data)
 
-        elif request.method == 'POST':  # Обрабатываем отправленную форму
-            title = request.form['title']
-            description = request.form['description']
-            price = float(request.form['price'])
-            image_file = request.files.get('image_url')  # Проверка загрузки нового изображения
-            print(f'Полученные данные: название {title}, описание{description}, цена{price}, фото{image_file}')
+        elif request.method == 'POST':  # Обрабатываем отправленные данные
+            title = request.form.get('title', False)
+            description = request.form.get('description', False)
+            price = request.form.get('price', False)
+            image_file = request.files.get('image_url')
             
-            # Если загрузилось новое изображение
+            updates = []
+            update_values = []
+
+            # Собираем обновление полей, только тех, которые были изменены
+            if title:
+                updates.append("title=%s")
+                update_values.append(title)
+                
+            if description:
+                updates.append("description=%s")
+                update_values.append(description)
+                
+            if price:
+                updates.append("price=%s")
+                update_values.append(float(price))  # Конвертировать цену в число
+
+            # Загрузка нового изображения
             if image_file and image_file.filename != '':
                 filename = secure_filename(image_file.filename)
                 image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 image_file.save(image_path)
-                print ('Файл: ', image_file)
                 new_image_url = "/uploads/" + filename
-                        # Обновление записей в таблице
-                sql_query = """
-                    UPDATE products SET title=%s, description=%s, price=%s, image_url=%s WHERE product_id=%s;
-                """
-                values = (title, description, price, new_image_url, id)
-                cur.execute(sql_query, values)
-                conn.commit()
-                cur.close()
-                conn.close()
-                flash('Товар успешно обновлён!', category='success')
-                return redirect(url_for('home'))  # Перенаправляем на список товаров
+                updates.append("image_url=%s")
+                update_values.append(new_image_url)
 
+            # Формирование SQL-запроса
+            if len(updates) > 0:
+                sql_query = f"""
+                    UPDATE products SET {','.join(updates)} WHERE product_id=%s;
+                """
+                update_values.append(id)
+                cur.execute(sql_query, tuple(update_values))
+                conn.commit()
+                flash('Товар успешно обновлен!', category='success')
             else:
-                # Здесь мы используем старый адрес изображения из формы
-                old_image_url = request.form.get('old_image_url')  # Предположительно старое изображение передается в форме
-                new_image_url = old_image_url
-                return redirect(url_for('home'))
+                flash('Ничего не изменилось.', category='info')
+
+            cur.close()
+            conn.close()
+            return redirect(url_for('home'))
 
 @app.route('/cart')
 def cart():

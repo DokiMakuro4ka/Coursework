@@ -1,0 +1,121 @@
+Давайте упростим процесс редактирования товаров, чтобы пользователям не приходилось заполнять все поля заново каждый раз. Достаточно будет заполнить только те поля, которые нужно изменить, остальные останутся такими же, как были изначально.
+
+Изменённый код функции edit_product выглядит следующим образом:
+
+from werkzeug.utils import secure_filename
+import os
+
+def edit_product(id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT role_id FROM users WHERE user_id=%s', (session['user_id'],))
+    user_role = cur.fetchone()[0]
+    print('Роль: ', user_role)
+    if user_role == '1':
+        flash('Вы не имеете полномочий для редактирования товаров.', 'danger')
+        return redirect(url_for('home'))
+    else:
+        if request.method == 'GET':  # Показываем форму редактирования товара
+            cur.execute("SELECT * FROM products WHERE product_id=%s;", (id,))
+            product = cur.fetchone()
+            if not product:
+                flash('Товар не найден.', category='warning')
+                return redirect(url_for('home'))
+            else:
+                return render_template('edit_product.html', product=product)
+
+        elif request.method == 'POST':  # Обрабатываем отправленные данные
+            title = request.form.get('title', False)
+            description = request.form.get('description', False)
+            price = request.form.get('price', False)
+            image_file = request.files.get('image_url')
+            
+            updates = []
+            update_values = []
+
+            # Собираем обновление полей, только тех, которые были изменены
+            if title:
+                updates.append("title=%s")
+                update_values.append(title)
+                
+            if description:
+                updates.append("description=%s")
+                update_values.append(description)
+                
+            if price:
+                updates.append("price=%s")
+                update_values.append(float(price))  # Конвертировать цену в число
+
+            # Загрузка нового изображения
+            if image_file and image_file.filename != '':
+                filename = secure_filename(image_file.filename)
+                image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                image_file.save(image_path)
+                new_image_url = "/uploads/" + filename
+                updates.append("image_url=%s")
+                update_values.append(new_image_url)
+
+            # Формирование SQL-запроса
+            if len(updates) > 0:
+                sql_query = f"""
+                    UPDATE products SET {','.join(updates)} WHERE product_id=%s;
+                """
+                update_values.append(id)
+                cur.execute(sql_query, tuple(update_values))
+                conn.commit()
+                flash('Товар успешно обновлен!', category='success')
+            else:
+                flash('Ничего не изменилось.', category='info')
+
+            cur.close()
+            conn.close()
+            return redirect(url_for('home'))
+
+Основные улучшения:
+
+Выборочное изменение полей:
+
+Поля обновляются только тогда, когда они были переданы в форме (например, если меняется только название товара, изменяется только оно).
+
+
+Отсутствие обязательного заполнения всей формы:
+
+Пользователь вводит только те данные, которые хочет изменить. Остальные остаются неизменёнными.
+
+
+Загрузка изображений необязательна:
+
+Если не загружается новое изображение, старая картинка остаётся той же самой.
+
+
+Простота интерфейса:
+
+Форма редактирования станет легче и удобнее для пользователей, поскольку не придётся повторно вводить всю информацию о товаре целиком.
+
+
+HTML-шаблон edit_product.html
+
+Этот шаблон немного упрощает жизнь пользователю, позволяя оставить пустые поля для тех значений, которые менять не нужно:
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Редактирование товара</title>
+</head>
+<body>
+<h1>Редактирование товара</h1>
+<form action="" method="post" enctype="multipart/form-data">
+    {{ form.hidden_tag() }}
+    Название:<br><input type="text" name="title" value="{{ product.title }}"><br>
+    Описание:<br><textarea name="description">{{ product.description }}</textarea><br>
+    Цена:<br><input type="number" step="any" name="price" value="{{ product.price }}"><br>
+    Изображение:<br><input type="file" name="image_url"><br>
+    <button type="submit">Обновить товар</button>
+</form>
+</body>
+</html>
+
+Итог:
+
+Пользователи смогут быстро и удобно изменять отдельные части информации о товаре, без необходимости полного повторного ввода всех данных.

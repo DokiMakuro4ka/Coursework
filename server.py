@@ -32,8 +32,35 @@ UPLOAD_FOLDER = app.config['UPLOAD_FOLDER']
 # Разрешенные расширения файлов
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+@app.template_filter('to_datetime')
+def to_datetime(value):
+    """Кастомный фильтр для превращения строки в объект datetime"""
+    if isinstance(value, str):
+        return datetime.fromisoformat(value)
+    return value
+
+@app.template_filter('strftime')
+def strftime(value, fmt='%Y-%m-%d'):
+    """
+    Кастомный фильтр для форматирования даты/времени в Jinja2.
+    :param value: Значение даты (объект datetime или строка)
+    :param fmt: Формат даты (по умолчанию '%Y-%m-%d')
+    :return: Отформатированная строка даты
+    """
+    if isinstance(value, datetime):
+        return value.strftime(fmt)
+    elif isinstance(value, str):
+        # Пробуем разобрать строку как объект datetime
+        dt = datetime.fromisoformat(value)
+        return dt.strftime(fmt)
+    else:
+        return ""
+
 
 # Класс для представления пользователя
 class User:
@@ -88,7 +115,7 @@ def home():
 @app.route('/user/create', methods=['POST'])
 def create_user():
     user_name = request.form['user_name']
-    email = request.form['mail']
+    mail = request.form['mail']  # mail → email (для единообразия)
     password = request.form['password']
 
     # Хешируем пароль перед сохранением
@@ -97,11 +124,11 @@ def create_user():
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # Сохраняем хешированный пароль
+    # Автоматически устанавливаем роль пользователя равной 1
     cur.execute('''
-        INSERT INTO USERS(user_name, email, password_hash)
-        VALUES (%s, %s, %s);
-    ''', (user_name, email, hashed_password))
+        INSERT INTO users(user_name, email, password_hash, role_id)
+        VALUES (%s, %s, %s, 1);  -- Ставим роль 1 по умолчанию
+    ''', (user_name, mail, hashed_password))
 
     conn.commit()
     cur.close()
@@ -135,6 +162,7 @@ def login():
                 # Успешная авторизация
                 session['logged_in'] = True
                 session["user_id"] = user[0]
+                session["user_role"] = user[6]
                 return redirect(url_for("profile"))  # Перенаправление на профиль
                 
             else:
@@ -656,39 +684,111 @@ def remove_from_cart():
 
 @app.route('/orders', methods=['GET'])
 def get_orders():
-    # Проверяем, залогинен ли пользователь
+    # Проверка авторизированности пользователя
     if not session.get("logged_in"):
         flash('Вы должны войти в систему.', 'warning')
         return redirect(url_for('login'))
-
-    # Получаем историю заказов из базы данных
+    
+    # Получаем идентификатор пользователя из сессии
+    user_id = session.get('user_id')
+    print(f'Полученное значение user_id: {user_id}')
+    
+    if not user_id:
+        flash('Ошибка идентификации пользователя.', 'danger')
+        return redirect(url_for('home'))  # Перенаправляем обратно на главную страницу
+    
+    # Получаем роль пользователя из базы данных
     with get_db_connection() as conn:
         cur = conn.cursor()
-        cur.execute("""
-            SELECT o.order_id, o.product_name, o.quantity, o.total_price, o.created_at, os.status_id
-            FROM orders o
-            INNER JOIN order_status os ON o.status_id = os.status_id
-            WHERE o.user_id = %s
-            ORDER BY o.created_at DESC
-        """, (session["user_id"],))
-        results = cur.fetchall()
+        cur.execute('SELECT role_id FROM users WHERE user_id=%s', (user_id,))
+        result = cur.fetchone()
+        if result:
+            user_role = result[0]
+            print('Role_id: ', user_role)
+        else:
+            user_role = None
+    
+    # Получаем доступные статусы заказов из базы данных
+    with get_db_connection() as conn:
+        cur = conn.cursor()
+        cur.execute('SELECT status_id, status_name FROM order_status')
+        statuses = dict(cur.fetchall())
 
-    # Преобразуем данные в удобный формат для шаблона
-    orders_data = [
-        {
-            "order_id": row[0],
-            "product_name": row[1],
-            "quantity": row[2],
-            "total_price": row[3],
-            "create_at": row[4].strftime('%Y-%m-%d'),
-            "status": row[5]
-        }
-        for row in results
-    ]
+    # Выбор нужного набора заказов в зависимости от роли пользователя
+    if user_role == 2:  # Администратор
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute('''
+                SELECT o.order_id, u.user_name, o.product_name, o.quantity, o.total_price, o.created_at, o.status_id
+                FROM orders o
+                LEFT JOIN users u ON o.user_id = u.user_id
+                ORDER BY o.created_at DESC
+            ''')
+            results = cur.fetchall()
+    else:  # Обычный пользователь видит только свои заказы
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute('''
+                SELECT o.order_id, u.user_name, o.product_name, o.quantity, o.total_price, o.created_at, o.status_id
+                FROM orders o
+                INNER JOIN users u ON o.user_id = u.user_id
+                WHERE o.user_id = %s
+                ORDER BY o.created_at DESC
+            ''', (user_id,))
+            results = cur.fetchall()
 
-    return render_template('orders.html', orders=orders_data)
+    # Формируем данные для вывода
+    orders_data = []
+    for row in results:
+        order_id, user_name, product_name, quantity, total_price, created_at, status_id = row
+        # Проверяем, что created_at - это строка, и преобразуем её в объект datetime
+        if isinstance(created_at, str):
+            created_at = datetime.fromisoformat(created_at)
+        formatted_created_at = created_at.strftime('%Y-%m-%d') if created_at else ''
+        status_name = statuses.get(status_id, 'Не определен')
+        orders_data.append({
+            "order_id": order_id,
+            "user_name": user_name,  # Добавляем никнейм пользователя
+            "product_name": product_name,
+            "quantity": quantity,
+            "total_price": total_price,
+            "created_at": formatted_created_at,
+            "status": status_name
+        })
 
-@app.route('/history', methods=['GET'])
+    return render_template('orders.html', orders=orders_data, user_role=user_role)
+
+@app.route("/update_order/<int:order_id>", methods=['POST'])
+def update_order_status(order_id):
+    # Проверяем, что у пользователя есть право изменять статус заказа
+    print('Role123: ', session.get("user_role"))
+    if session.get("user_role") != 2:
+        print('Недостаточно прав для изменения статуса заказа.', 'danger')
+        return redirect(url_for('get_orders'))
+
+    # Получаем новый статус из формы
+    new_status = int(request.form['new_status'])
+
+    # Устанавливаем соединение с базой данных
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    # Обновляем статус заказа
+    cur.execute(
+        '''
+        UPDATE orders SET status_id = %s WHERE order_id = %s
+        ''',
+        (new_status, order_id)
+    )
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    flash('Статус заказа успешно обновлён.', 'success')
+    return redirect(url_for('get_orders'))
+
+app.route('/history', methods=['GET'])
 def history():
     # Проверяем, залогинен ли пользователь
     if not session.get("logged_in"):
@@ -716,7 +816,6 @@ def history():
     
     # Передаём данные в шаблон
     return render_template('orders.html', orders=orders)
-
 
 if __name__ == '__main__':
     app.run(debug=True)

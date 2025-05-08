@@ -12,23 +12,39 @@
         <thead>
             <tr>
                 <th>Номер заказа</th>
+                <th>Никнейм пользователя</th> <!-- Новое поле -->
                 <th>Продукт</th>
                 <th>Количество</th>
                 <th>Стоимость</th>
                 <th>Дата заказа</th>
                 <th>Статус</th>
+                {% if user_role == 2 %}
+                    <th>Действия</th>
+                {% endif %}
             </tr>
         </thead>
         <tbody>
             {% for order in orders %}
                 <tr>
                     <td>{{ order.order_id }}</td>
+                    <td>{% if user_role == 2 %}{{ order.user_name }}{% endif %}</td> <!-- Показывать никнейм только администраторам -->
                     <td>{{ order.product_name }}</td>
                     <td>{{ order.quantity }}</td>
-                    <td>{{ "%0.2f" | format(order.total_price) }} руб.</td>
-                    <td>{{ order.create_at }}</td>
-                    <!-- Интерпретация статусов -->
-                    <td>{% if order.status == 1 %}Новый{% elif order.status == 2 %}В обработке{% elif order.status == 3 %}Выполненный{% else %}{{order.status}}{% endif %}</td>
+                    <td>{{ "%.2f" | format(order.total_price) }} руб.</td>
+                    <td>{{ order.created_at }}</td>
+                    <td>{{ order.status }}</td>
+                    {% if user_role == 2 %}
+                        <td>
+                            <form method="POST" action="/update_order/{{ order.order_id }}">
+                                <select name="new_status">
+                                    <option value="1"{% if order.status == 'Готов' %} selected{% endif %}>Готов</option>
+                                    <option value="2"{% if order.status == 'В обработке' %} selected{% endif %}>В обработке</option>
+                                    <option value="3"{% if order.status == 'В пути' %} selected{% endif %}>В пути</option>
+                                </select>
+                                <button type="submit">Изменить статус</button>
+                            </form>
+                        </td>
+                    {% endif %}
                 </tr>
             {% endfor %}
         </tbody>

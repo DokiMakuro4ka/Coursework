@@ -422,30 +422,21 @@ def add_to_cart():
         # Получаем ID продукта и количество из формы
         product_id = int(request.form.get("product_id"))
         count = int(request.form.get("count", 1))  # Количество товара (по умолчанию 1)
-
+        
         # Проверка наличия аутентифицированного пользователя
         if not session.get("user_id"):
             flash("Необходимо войти в систему.")
             return redirect(url_for("login"))  # Перенаправляем на страницу авторизации
-
-        # Получаем роль пользователя из базы данных
+            
+        # Добавляем товар в корзину любого зарегистрированного пользователя
         with get_db_connection() as conn:
             cur = conn.cursor()
-            cur.execute("SELECT role_id FROM users WHERE user_id=%s", (session.get("user_id"),))
-            user_role = cur.fetchone()
-
-            # Проверяем, что пользователь имеет роль администратора (role_id = 2)
-            if not user_role or user_role[0] != 2:
-                flash("Только администраторы могут добавлять товары в корзину.", "danger")
-                return redirect(url_for("home"))
-
-            # Если пользователь администратор, добавляем товар в корзину
             cur.execute(
                 "INSERT INTO cart (product_id, user_id, count) VALUES (%s, %s, %s)",
                 (product_id, session.get("user_id"), count)
             )
             conn.commit()
-
+        
         flash("Товар успешно добавлен в корзину!")
         return redirect(url_for("home"))  # Возвращаемся обратно на главную страницу
 
@@ -455,35 +446,43 @@ def add_to_cart():
         return redirect(url_for("home"))
 
 @app.route('/add_product', methods=['GET', 'POST'])
-def add_product():  
+def add_product():
     if request.method == 'POST':
+        # Получаем данные из формы
         name = request.form['name']
         description = request.form['description']
         price = float(request.form['price'])
         
-        # Обработка загрузки фото
+        # Загрузка фото
         file = request.files.get('photo')
         photo_path = None
         if file and file.filename != '':
             filename = secure_filename(file.filename)
             
-            # Определение пути для сохранения файла относительно текущего рабочего каталога
+            # Определяем директорию для сохранения файлов
             upload_folder = 'uploads'
-            os.makedirs(upload_folder, exist_ok=True)  # Создаем директорию загрузки, если её ещё нет
+            os.makedirs(upload_folder, exist_ok=True)  # Создаем директорию, если её нет
             
             # Полный путь для сохранения файла
             full_path = os.path.join(upload_folder, filename)
             
-            # Сохранение файла
+            # Сохраняем файл
             file.save(full_path)
             
-            # Относительный путь для записи в базу данных
+            # Записываем относительный путь в базу данных
             photo_path = '/' + full_path.lstrip('/')
         
+        # Проверяем роль пользователя
+        user_role = session.get('user_role')  # Предполагается, что роль хранится в сессии
+        if user_role is None or user_role != 2:  # Роль администратора равна 2
+            flash('Доступ ограничен. Товар могут добавлять только администраторы.', category='danger')
+            return redirect(url_for('home'))  # Перенаправляем на главную страницу
+        
         try:
-            conn = get_db_connection()  # Предположительно, ваша функция подключения к БД
+            conn = get_db_connection()  # Подключаемся к базе данных
             cur = conn.cursor()
             
+            # Выполняем вставку данных
             sql_query = """
                 INSERT INTO products (title, description, price, image_url)
                 VALUES (%s, %s, %s, %s);
@@ -491,6 +490,7 @@ def add_product():
             values = (name, description, price, photo_path)
             cur.execute(sql_query, values)
             conn.commit()
+            
             flash('Продукт успешно добавлен!', category='success')
             return redirect(url_for('home'))
         except Exception as e:
@@ -821,7 +821,6 @@ def get_orders():
 @app.route("/update_order/<int:order_id>", methods=['POST'])
 def update_order_status(order_id):
     # Проверяем, что у пользователя есть право изменять статус заказа
-    print('Role123: ', session.get("user_role"))
     if session.get("user_role") != 2:
         print('Недостаточно прав для изменения статуса заказа.', 'danger')
         return redirect(url_for('get_orders'))
@@ -847,35 +846,6 @@ def update_order_status(order_id):
 
     flash('Статус заказа успешно обновлён.', 'success')
     return redirect(url_for('get_orders'))
-
-app.route('/history', methods=['GET'])
-def history():
-    # Проверяем, залогинен ли пользователь
-    if not session.get("logged_in"):
-        flash('Вам необходимо войти в систему!', 'warning')
-        return redirect(url_for('login'))
-    
-    # Подключаемся к базе данных
-    conn = get_db_connection()
-    cur = conn.cursor()
-    
-    # Выполняем запрос с сортировкой по дате заказа
-    cur.execute("""
-        SELECT id, product_name, quantity, total_price, created_at, status
-        FROM orders
-        WHERE user_id=%s
-        ORDER BY created_at DESC
-    """, (session["user_id"],))
-    
-    # Берём все полученные заказы
-    orders = cur.fetchall()
-    
-    # Закрываем подключение
-    cur.close()
-    conn.close()
-    
-    # Передаём данные в шаблон
-    return render_template('orders.html', orders=orders)
 
 if __name__ == '__main__':
     app.run(debug=True)

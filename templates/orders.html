@@ -12,7 +12,9 @@
         <thead>
             <tr>
                 <th>Номер заказа</th>
-                <th>Никнейм пользователя</th> <!-- Новое поле -->
+                {% if user_role == 2 %}
+                    <th>Никнейм пользователя</th> <!-- Видно только администраторам -->
+                {% endif %}
                 <th>Продукт</th>
                 <th>Количество</th>
                 <th>Стоимость</th>
@@ -27,7 +29,9 @@
             {% for order in orders %}
                 <tr>
                     <td>{{ order.order_id }}</td>
-                    <td>{% if user_role == 2 %}{{ order.user_name }}{% endif %}</td> <!-- Показывать никнейм только администраторам -->
+                    {% if user_role == 2 %}
+                        <td>{{ order.user_name }}</td> <!-- Никнейм отображается только администраторам -->
+                    {% endif %}
                     <td>{{ order.product_name }}</td>
                     <td>{{ order.quantity }}</td>
                     <td>{{ "%.2f" | format(order.total_price) }} руб.</td>

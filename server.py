@@ -8,6 +8,12 @@ from werkzeug.utils import secure_filename
 import os
 
 app = Flask(__name__, static_folder="")
+app.secret_key = '123123'
+app.config['UPLOAD_FOLDER'] = './uploads/'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  
+
+app.config["SECRET_KEY"] = "super_secret_key"
+app.config["SESSION_TYPE"] = "filesystem"      
 from flask_session import Session
 Session(app)
 

@@ -8,18 +8,11 @@ from werkzeug.utils import secure_filename
 import os
 
 app = Flask(__name__, static_folder="")
-app.secret_key = '123123'
-app.config['UPLOAD_FOLDER'] = './uploads/'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  
-
-# Конфигурация для работы с сессией
-app.config["SECRET_KEY"] = "super_secret_key"  # Замените на свою секретную фразу
-app.config["SESSION_TYPE"] = "filesystem"      # Хранение сессий на файловой системе
 from flask_session import Session
 Session(app)
 
 # Настройки подключения к базе данных
-DATABASE_URL = 'postgresql://postgres:123123@localhost:5432/users_application'  # Ваш URL подключения к БД
+DATABASE_URL = 'postgresql://_abcd1234z:cDaTAjnKxaj65XenmhbtDAKL0kJY9Hs4@dpg-d12phh49c44c738iqnkg-a/users_application_srjo'
 
 # Функция для получения соединения с базой данных
 def get_db_connection():

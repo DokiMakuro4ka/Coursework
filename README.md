@@ -67,20 +67,6 @@ Task: Create a Flask application where users can view products, manage orders, a
 - 🎨 Статические файлы (static) — CSS, JS, изображения
 - 🗄️ База данных — хранение информации о товарах, заказах, пользователях
 - 🔒 Модули авторизации — управление сессиями, права доступа
-
-### 📂 Примерная структура проекта
-
-```
-Coursework/
-├── app.py
-├── models.py
-├── forms.py
-├── templates/
-├── static/
-├── requirements.txt
-└── README.md
-```
-
 </td>
 <td valign="top">
 
@@ -93,20 +79,6 @@ Coursework/
 - 🎨 Static files — CSS, JS, images
 - 🗄️ Database — stores products, orders, users
 - 🔒 Auth modules — session & permission management
-
-### 📂 Example Project Structure
-
-```
-Coursework/
-├── app.py
-├── models.py
-├── forms.py
-├── templates/
-├── static/
-├── requirements.txt
-└── README.md
-```
-
 </td>
 </tr>
 <tr>

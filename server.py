@@ -18,7 +18,7 @@ from flask_session import Session
 Session(app)
 
 # Настройки подключения к базе данных
-DATABASE_URL = 'postgresql://users_application_q6ok_user:Myf3l9gCMxT0n6SZ7ewn7YU3fGPE1UWT@dpg-d28a6u3ipnbc739h0hk0-a.oregon-postgres.render.com/users_application_q6ok'
+DATABASE_URL = 'postgresql://users_application_q6ok_user:Myf3l9gCMxT0n6SZ7ewn7YU3fGPE1UWT@dpg-d28a6u3ipnbc739h0hk0-a/users_application_q6ok'
 
 # Функция для получения соединения с базой данных
 def get_db_connection():
